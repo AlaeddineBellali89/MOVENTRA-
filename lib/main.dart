@@ -31,6 +31,9 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int page = 0;
   String lang = 'en';
+  double pain = 3;
+  bool workoutDone = false;
+  bool recoveryDone = false;
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -182,9 +185,12 @@ class _ShellState extends State<Shell> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.transparent,
-          title: const Text(
-            'MOVENTRA',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('MOVENTRA', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('by Bellali', style: TextStyle(fontSize: 10)),
+            ],
           ),
           actions: [
             IconButton(
@@ -235,9 +241,12 @@ class _ShellState extends State<Shell> {
     );
   }
 
-  Widget infoCard(IconData icon, String title, String subtitle) {
+  Widget infoCard(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
     return Card(
-      child: Padding(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
         padding: const EdgeInsets.all(18),
         child: Row(
           children: [
@@ -268,6 +277,7 @@ class _ShellState extends State<Shell> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -278,9 +288,9 @@ class _ShellState extends State<Shell> {
         style: const TextStyle(fontSize: 18),
       ),
       const SizedBox(height: 25),
-      infoCard(Icons.fitness_center, tr('plan'), tr('push')),
+      infoCard(Icons.fitness_center, tr('plan'), tr('push'), onTap: () => setState(() => page = 2)),
       const SizedBox(height: 12),
-      infoCard(Icons.healing, tr('focus'), tr('shoulder')),
+      infoCard(Icons.healing, tr('focus'), tr('shoulder'), onTap: () => setState(() => page = 3)),
       const SizedBox(height: 22),
       FilledButton.icon(
         onPressed: () => setState(() => page = 1),
@@ -311,16 +321,17 @@ class _ShellState extends State<Shell> {
         ),
       ),
       const SizedBox(height: 25),
-      Text('${tr('pain')}:'),
+      Text('${tr('pain')}: ${pain.round()} / 10'),
       Slider(
-        value: 3,
+        value: pain,
         min: 0,
         max: 10,
         divisions: 10,
-        onChanged: (_) {},
+        label: pain.round().toString(),
+        onChanged: (value) => setState(() => pain = value),
       ),
       const SizedBox(height: 20),
-      infoCard(Icons.favorite, tr('ready'), '7 / 10'),
+      infoCard(Icons.favorite, tr('ready'), '${(10 - pain * 0.7).round().clamp(1, 10)} / 10'),
     ]);
   }
 
@@ -335,6 +346,15 @@ class _ShellState extends State<Shell> {
       ),
       const SizedBox(height: 20),
       infoCard(Icons.fitness_center, tr('push'), tr('exercise')),
+      const SizedBox(height: 18),
+      FilledButton.icon(
+        onPressed: () => setState(() => workoutDone = true),
+        icon: Icon(workoutDone ? Icons.check_circle : Icons.play_arrow),
+        label: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Text(workoutDone ? '✓ Completed' : 'Complete workout'),
+        ),
+      ),
     ]);
   }
 
@@ -349,6 +369,15 @@ class _ShellState extends State<Shell> {
       ),
       const SizedBox(height: 20),
       infoCard(Icons.healing, tr('focus'), tr('recText')),
+      const SizedBox(height: 18),
+      FilledButton.icon(
+        onPressed: () => setState(() => recoveryDone = true),
+        icon: Icon(recoveryDone ? Icons.check_circle : Icons.healing),
+        label: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Text(recoveryDone ? '✓ Completed' : 'Complete recovery'),
+        ),
+      ),
     ]);
   }
 
@@ -363,6 +392,12 @@ class _ShellState extends State<Shell> {
       ),
       const SizedBox(height: 20),
       infoCard(Icons.insights, tr('progTitle'), tr('progText')),
+      const SizedBox(height: 12),
+      infoCard(Icons.trending_down, tr('pain'), '${pain.round()} / 10'),
+      const SizedBox(height: 12),
+      infoCard(Icons.check_circle, tr('workout'), workoutDone ? '✓ Completed' : 'Pending'),
+      const SizedBox(height: 12),
+      infoCard(Icons.healing, tr('recovery'), recoveryDone ? '✓ Completed' : 'Pending'),
     ]);
   }
 }
