@@ -53,6 +53,13 @@ class _ShellState extends State<Shell> {
   bool checkSaved = false;
   final Set<String> painfulZones = <String>{};
   bool bodyBackView = false;
+  double bodyRotation = 0.0;
+  String symptomDuration = 'recent';
+  String symptomPattern = 'movement';
+  bool redFlagTrauma = false;
+  bool redFlagNeuro = false;
+  bool redFlagSystemic = false;
+  bool redFlagBowelBladder = false;
   bool trainingDone = false;
   bool recoveryDone = false;
 
@@ -558,6 +565,30 @@ class _ShellState extends State<Shell> {
     ]);
   }
 
+  bool get hasSafetyFlag =>
+      redFlagTrauma || redFlagNeuro || redFlagSystemic || redFlagBowelBladder;
+
+  String safetyMessage() {
+    if (lang == 'ar') {
+      return hasSafetyFlag
+          ? 'تم رصد علامة تستدعي الحذر. MOVENTRA لن يقترح برنامج تأهيل تلقائي لهذه الحالة. اطلب تقييماً طبياً مناسباً، وبشكل عاجل عند أعراض عصبية شديدة أو تغير التحكم بالمثانة/الأمعاء.'
+          : 'لم يتم تحديد علامة خطر في هذه الشاشة. هذا الفحص لا يشخّص إصابة ولا يستبدل التقييم الطبي.';
+    }
+    if (lang == 'fr') {
+      return hasSafetyFlag
+          ? 'Un signal de sécurité a été identifié. MOVENTRA ne proposera pas de rééducation automatique dans ce cas. Demandez une évaluation médicale adaptée.'
+          : 'Aucun signal de sécurité n’a été sélectionné ici. Ce bilan ne pose pas de diagnostic et ne remplace pas une évaluation médicale.';
+    }
+    if (lang == 'de') {
+      return hasSafetyFlag
+          ? 'Ein Sicherheitshinweis wurde erkannt. MOVENTRA erstellt dafür kein automatisches Reha-Programm. Bitte medizinisch abklären lassen.'
+          : 'Hier wurde kein Sicherheitshinweis ausgewählt. Dieser Check stellt keine Diagnose und ersetzt keine medizinische Untersuchung.';
+    }
+    return hasSafetyFlag
+        ? 'A safety flag was identified. MOVENTRA will not generate an automatic rehab plan for this presentation. Seek appropriate medical assessment.'
+        : 'No safety flag was selected here. This check does not diagnose an injury or replace medical assessment.';
+  }
+
   Widget bodyMap() {
     String l(String en, String ar, String fr, String de) {
       if (lang == 'ar') return ar;
@@ -621,15 +652,36 @@ class _ShellState extends State<Shell> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SegmentedButton<bool>(
-          segments: [
-            ButtonSegment(value:false, icon:const Icon(Icons.accessibility_new),
-              label:Text(l('Front','أمام','Avant','Vorne'))),
-            ButtonSegment(value:true, icon:const Icon(Icons.accessibility),
-              label:Text(l('Back','خلف','Arrière','Hinten'))),
+        Text(
+          l('360° Body selector','محدد الجسم 360°','Sélecteur corporel 360°','360° Körperauswahl'),
+          style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold),
+          textAlign:TextAlign.center,
+        ),
+        const SizedBox(height:8),
+        Text(
+          l('Drag the control to rotate. The active anatomical side changes automatically.',
+            'حرّك المؤشر لتدوير الجسم. تتغير الجهة التشريحية النشطة تلقائياً.',
+            'Faites glisser pour tourner. La face anatomique active change automatiquement.',
+            'Zum Drehen schieben. Die aktive Körperseite wechselt automatisch.'),
+          textAlign:TextAlign.center,
+        ),
+        Slider(
+          value:bodyRotation,
+          min:0,max:360,divisions:72,
+          label:'${bodyRotation.round()}°',
+          onChanged:(v)=>setState((){
+            bodyRotation=v;
+            final normalized=v%360;
+            bodyBackView=normalized>90 && normalized<270;
+          }),
+        ),
+        Row(
+          mainAxisAlignment:MainAxisAlignment.spaceBetween,
+          children:[
+            Text(l('Front','أمام','Avant','Vorne')),
+            Text('${bodyRotation.round()}°',style:const TextStyle(fontWeight:FontWeight.bold)),
+            Text(l('Back','خلف','Arrière','Hinten')),
           ],
-          selected:{bodyBackView},
-          onSelectionChanged:(v)=>setState(()=>bodyBackView=v.first),
         ),
         const SizedBox(height:14),
         Text(l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
@@ -641,9 +693,14 @@ class _ShellState extends State<Shell> {
           'Ausgewählte Bereiche werden rot. Erneut tippen zum Entfernen.')),
         const SizedBox(height:14),
         Center(
-          child:SizedBox(
-            width:280,height:480,
-            child:Stack(children:[
+          child:Transform(
+            alignment:Alignment.center,
+            transform:Matrix4.identity()
+              ..setEntry(3,2,0.0012)
+              ..rotateY(bodyRotation * 3.141592653589793 / 180),
+            child:SizedBox(
+              width:280,height:480,
+              child:Stack(children:[
               Positioned(left:110,top:0,child:Container(width:60,height:60,
                 decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:Colors.white54,width:2)))),
               Positioned(left:100,top:55,child:Container(width:80,height:180,
@@ -677,7 +734,8 @@ class _ShellState extends State<Shell> {
                   ),
                 );
               }),
-            ]),
+              ]),
+            ),
           ),
         ),
         if(painfulZones.isNotEmpty) ...[
@@ -737,6 +795,67 @@ class _ShellState extends State<Shell> {
         selected: {bodySide},
         onSelectionChanged: (v) => setState(() => bodySide = v.first),
       ),
+      const SizedBox(height:18),
+      DropdownButtonFormField<String>(
+        value:symptomDuration,
+        decoration:InputDecoration(
+          labelText:l('How long?','منذ متى؟','Depuis combien de temps ?','Seit wann?'),
+          border:const OutlineInputBorder(),
+        ),
+        items:[
+          DropdownMenuItem(value:'recent',child:Text(l('Less than 2 weeks','أقل من أسبوعين','Moins de 2 semaines','Weniger als 2 Wochen'))),
+          DropdownMenuItem(value:'weeks',child:Text(l('2–6 weeks','2–6 أسابيع','2–6 semaines','2–6 Wochen'))),
+          DropdownMenuItem(value:'persistent',child:Text(l('More than 6 weeks','أكثر من 6 أسابيع','Plus de 6 semaines','Mehr als 6 Wochen'))),
+        ],
+        onChanged:(v)=>setState(()=>symptomDuration=v??symptomDuration),
+      ),
+      const SizedBox(height:12),
+      DropdownButtonFormField<String>(
+        value:symptomPattern,
+        decoration:InputDecoration(
+          labelText:l('When is it most noticeable?','متى يظهر أكثر؟','Quand est-ce le plus présent ?','Wann ist es am stärksten?'),
+          border:const OutlineInputBorder(),
+        ),
+        items:[
+          DropdownMenuItem(value:'movement',child:Text(l('With movement/load','مع الحركة/الحمل','Avec mouvement/charge','Bei Bewegung/Belastung'))),
+          DropdownMenuItem(value:'rest',child:Text(l('At rest','في الراحة','Au repos','In Ruhe'))),
+          DropdownMenuItem(value:'both',child:Text(l('Both','كلاهما','Les deux','Beides'))),
+        ],
+        onChanged:(v)=>setState(()=>symptomPattern=v??symptomPattern),
+      ),
+      const SizedBox(height:18),
+      Text(l('Safety screen','فحص الأمان','Écran de sécurité','Sicherheitscheck'),
+        style:const TextStyle(fontSize:20,fontWeight:FontWeight.bold)),
+      CheckboxListTile(
+        contentPadding:EdgeInsets.zero,value:redFlagTrauma,
+        title:Text(l('Major recent trauma','إصابة/صدمة قوية حديثة','Traumatisme important récent','Stärkeres kürzliches Trauma')),
+        onChanged:(v)=>setState(()=>redFlagTrauma=v??false),
+      ),
+      CheckboxListTile(
+        contentPadding:EdgeInsets.zero,value:redFlagNeuro,
+        title:Text(l('New or worsening marked weakness/numbness','ضعف أو خدر واضح جديد أو متفاقم','Faiblesse/engourdissement marqué nouveau ou aggravé','Neue/zunehmende deutliche Schwäche/Taubheit')),
+        onChanged:(v)=>setState(()=>redFlagNeuro=v??false),
+      ),
+      CheckboxListTile(
+        contentPadding:EdgeInsets.zero,value:redFlagSystemic,
+        title:Text(l('Fever or feeling systemically unwell with the pain','حمى أو شعور عام بالمرض مع الألم','Fièvre ou malaise général avec la douleur','Fieber oder starkes Krankheitsgefühl mit Schmerzen')),
+        onChanged:(v)=>setState(()=>redFlagSystemic=v??false),
+      ),
+      CheckboxListTile(
+        contentPadding:EdgeInsets.zero,value:redFlagBowelBladder,
+        title:Text(l('New bladder/bowel control change or saddle numbness','تغير جديد في التحكم بالمثانة/الأمعاء أو خدر بمنطقة العجان','Nouveau trouble vessie/intestin ou anesthésie en selle','Neue Blasen-/Darmstörung oder Taubheit im Sattelbereich')),
+        onChanged:(v)=>setState(()=>redFlagBowelBladder=v??false),
+      ),
+      Card(
+        child:Padding(
+          padding:const EdgeInsets.all(14),
+          child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Icon(hasSafetyFlag?Icons.warning_amber_rounded:Icons.verified_user_outlined),
+            const SizedBox(width:10),
+            Expanded(child:Text(safetyMessage())),
+          ]),
+        ),
+      ),
       const SizedBox(height: 22),
       Text('${tr('pain')}: ${pain.round()} / 10',
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -767,6 +886,7 @@ class _ShellState extends State<Shell> {
   }
 
   String adaptiveTrainingText() {
+    if (hasSafetyFlag) return safetyMessage();
     if (!checkSaved) return tr('exercise');
     if (pain >= 7) {
       return lang == 'ar'
@@ -784,6 +904,7 @@ class _ShellState extends State<Shell> {
   }
 
   String adaptiveRecoveryText() {
+    if (hasSafetyFlag) return safetyMessage();
     if (!checkSaved) return tr('recText');
     if (pain >= 7) {
       return lang == 'ar'
@@ -846,7 +967,7 @@ class _ShellState extends State<Shell> {
       ),
       const SizedBox(height:18),
       FilledButton.icon(
-        onPressed:()=>setState(()=>trainingDone=!trainingDone),
+        onPressed:hasSafetyFlag ? null : ()=>setState(()=>trainingDone=!trainingDone),
         icon:Icon(trainingDone?Icons.check_circle:Icons.circle_outlined),
         label:Padding(
           padding:const EdgeInsets.all(14),
@@ -880,7 +1001,7 @@ class _ShellState extends State<Shell> {
       ),
       const SizedBox(height:18),
       FilledButton.icon(
-        onPressed:()=>setState(()=>recoveryDone=!recoveryDone),
+        onPressed:hasSafetyFlag ? null : ()=>setState(()=>recoveryDone=!recoveryDone),
         icon:Icon(recoveryDone?Icons.check_circle:Icons.circle_outlined),
         label:Padding(
           padding:const EdgeInsets.all(14),
@@ -918,6 +1039,14 @@ class _ShellState extends State<Shell> {
         Icons.task_alt,
         lang=='ar'?'إنجاز اليوم':'Today completion',
         '${trainingDone ? '✓' : '○'} Training   ${recoveryDone ? '✓' : '○'} Recovery',
+      ),
+      const SizedBox(height:12),
+      infoCard(
+        Icons.science_outlined,
+        lang=='ar'?'منهج MOVENTRA':'MOVENTRA approach',
+        lang=='ar'
+          ? 'تحديد الأعراض ومراقبة التقدم وتوجيه النشاط — وليس تشخيصاً طبياً.'
+          : 'Symptom mapping, progress monitoring and activity guidance — not medical diagnosis.',
       ),
     ]);
   }
