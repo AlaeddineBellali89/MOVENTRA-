@@ -34,6 +34,14 @@ class _ShellState extends State<Shell> {
   double pain = 3;
   bool workoutDone = false;
   bool recoveryDone = false;
+  String bodyArea = 'shoulder';
+  String bodySide = 'right';
+  String symptomDuration = 'days';
+  String symptomOnset = 'gradual';
+  bool recentTrauma = false;
+  bool numbnessWeakness = false;
+  bool feverUnwell = false;
+  bool checkSaved = false;
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -312,16 +320,96 @@ class _ShellState extends State<Shell> {
   }
 
   Widget checkPage() {
+    final labels = <String, Map<String, String>>{
+      'en': {
+        'area':'Pain area','side':'Side','duration':'Duration','onset':'How did it start?',
+        'shoulder':'Shoulder','neck':'Neck','upperBack':'Upper back','lowerBack':'Lower back',
+        'elbow':'Elbow','wrist':'Wrist / hand','hip':'Hip','knee':'Knee','ankle':'Ankle / foot',
+        'right':'Right','left':'Left','center':'Center / both',
+        'today':'Today','days':'A few days','weeks':'A few weeks','months':'Months or longer',
+        'gradual':'Gradually','training':'During / after training','sudden':'Suddenly',
+        'safety':'Safety check','trauma':'Recent fall, collision or significant injury',
+        'neuro':'New numbness, marked weakness or loss of control',
+        'systemic':'Fever or feeling seriously unwell',
+        'save':'Save Body Check','saved':'Body Check saved',
+        'warning':'Your answers include a warning sign. Pause strenuous training and seek qualified medical assessment.',
+        'normal':'Check saved. MOVENTRA can now adapt the training and recovery screens.',
+      },
+      'ar': {
+        'area':'منطقة الألم','side':'الجهة','duration':'مدة الأعراض','onset':'كيف بدأ الألم؟',
+        'shoulder':'الكتف','neck':'الرقبة','upperBack':'أعلى الظهر','lowerBack':'أسفل الظهر',
+        'elbow':'المرفق','wrist':'الرسغ / اليد','hip':'الورك','knee':'الركبة','ankle':'الكاحل / القدم',
+        'right':'اليمين','left':'اليسار','center':'الوسط / الجهتان',
+        'today':'اليوم','days':'عدة أيام','weeks':'عدة أسابيع','months':'أشهر أو أكثر',
+        'gradual':'تدريجيًا','training':'أثناء / بعد التمرين','sudden':'فجأة',
+        'safety':'فحص الأمان','trauma':'سقوط أو اصطدام أو إصابة قوية مؤخرًا',
+        'neuro':'خدر جديد أو ضعف واضح أو فقدان التحكم',
+        'systemic':'حمّى أو شعور بمرض شديد',
+        'save':'حفظ فحص الجسم','saved':'تم حفظ فحص الجسم',
+        'warning':'إجاباتك تتضمن علامة تستدعي الانتباه. أوقف التدريب الشديد واطلب تقييمًا طبيًا مختصًا.',
+        'normal':'تم حفظ الفحص. يمكن لـ MOVENTRA الآن تكييف شاشات التدريب والتعافي.',
+      },
+      'fr': {
+        'area':'Zone douloureuse','side':'Côté','duration':'Durée','onset':'Comment cela a commencé ?',
+        'shoulder':'Épaule','neck':'Cou','upperBack':'Haut du dos','lowerBack':'Bas du dos',
+        'elbow':'Coude','wrist':'Poignet / main','hip':'Hanche','knee':'Genou','ankle':'Cheville / pied',
+        'right':'Droite','left':'Gauche','center':'Centre / les deux',
+        'today':"Aujourd'hui",'days':'Quelques jours','weeks':'Quelques semaines','months':'Des mois ou plus',
+        'gradual':'Progressivement','training':"Pendant / après l'entraînement",'sudden':'Soudainement',
+        'safety':'Vérification de sécurité','trauma':'Chute, collision ou traumatisme important récent',
+        'neuro':'Nouvel engourdissement, faiblesse marquée ou perte de contrôle',
+        'systemic':'Fièvre ou sensation de maladie importante',
+        'save':'Enregistrer le bilan','saved':'Bilan enregistré',
+        'warning':"Vos réponses comportent un signe d'alerte. Évitez l'entraînement intense et demandez une évaluation médicale qualifiée.",
+        'normal':"Bilan enregistré. MOVENTRA peut maintenant adapter l'entraînement et la récupération.",
+      },
+      'de': {
+        'area':'Schmerzbereich','side':'Seite','duration':'Dauer','onset':'Wie hat es begonnen?',
+        'shoulder':'Schulter','neck':'Nacken','upperBack':'Oberer Rücken','lowerBack':'Unterer Rücken',
+        'elbow':'Ellenbogen','wrist':'Handgelenk / Hand','hip':'Hüfte','knee':'Knie','ankle':'Knöchel / Fuß',
+        'right':'Rechts','left':'Links','center':'Mitte / beide Seiten',
+        'today':'Heute','days':'Einige Tage','weeks':'Einige Wochen','months':'Monate oder länger',
+        'gradual':'Allmählich','training':'Beim / nach dem Training','sudden':'Plötzlich',
+        'safety':'Sicherheitscheck','trauma':'Kürzlicher Sturz, Zusammenstoß oder stärkere Verletzung',
+        'neuro':'Neue Taubheit, deutliche Schwäche oder Kontrollverlust',
+        'systemic':'Fieber oder starkes Krankheitsgefühl',
+        'save':'Körper-Check speichern','saved':'Körper-Check gespeichert',
+        'warning':'Deine Antworten enthalten ein Warnzeichen. Pausiere intensives Training und lass dich qualifiziert medizinisch untersuchen.',
+        'normal':'Check gespeichert. MOVENTRA kann Training und Erholung jetzt anpassen.',
+      },
+    };
+
+    String c(String key) => labels[lang]?[key] ?? labels['en']![key]!;
+    final hasWarning = recentTrauma || numbnessWeakness || feverUnwell;
+
     return pageBody([
-      Text(
-        tr('body'),
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
+      Text(tr('body'), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      Text('${c(bodyArea)} • ${c(bodySide)}', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 22),
+
+      DropdownButtonFormField<String>(
+        initialValue: bodyArea,
+        decoration: InputDecoration(labelText: c('area'), border: const OutlineInputBorder()),
+        items: ['shoulder','neck','upperBack','lowerBack','elbow','wrist','hip','knee','ankle']
+            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
+        onChanged: (v) => setState(() => bodyArea = v ?? bodyArea),
       ),
-      const SizedBox(height: 25),
-      Text('${tr('pain')}: ${pain.round()} / 10'),
+      const SizedBox(height: 14),
+
+      SegmentedButton<String>(
+        segments: [
+          ButtonSegment(value: 'right', label: Text(c('right'))),
+          ButtonSegment(value: 'left', label: Text(c('left'))),
+          ButtonSegment(value: 'center', label: Text(c('center'))),
+        ],
+        selected: {bodySide},
+        onSelectionChanged: (v) => setState(() => bodySide = v.first),
+      ),
+      const SizedBox(height: 22),
+
+      Text('${tr('pain')}: ${pain.round()} / 10',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       Slider(
         value: pain,
         min: 0,
@@ -330,8 +418,72 @@ class _ShellState extends State<Shell> {
         label: pain.round().toString(),
         onChanged: (value) => setState(() => pain = value),
       ),
-      const SizedBox(height: 20),
-      infoCard(Icons.favorite, tr('ready'), '${(10 - pain * 0.7).round().clamp(1, 10)} / 10'),
+      const SizedBox(height: 14),
+
+      DropdownButtonFormField<String>(
+        initialValue: symptomDuration,
+        decoration: InputDecoration(labelText: c('duration'), border: const OutlineInputBorder()),
+        items: ['today','days','weeks','months']
+            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
+        onChanged: (v) => setState(() => symptomDuration = v ?? symptomDuration),
+      ),
+      const SizedBox(height: 14),
+
+      DropdownButtonFormField<String>(
+        initialValue: symptomOnset,
+        decoration: InputDecoration(labelText: c('onset'), border: const OutlineInputBorder()),
+        items: ['gradual','training','sudden']
+            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
+        onChanged: (v) => setState(() => symptomOnset = v ?? symptomOnset),
+      ),
+      const SizedBox(height: 22),
+
+      Text(c('safety'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: recentTrauma,
+        title: Text(c('trauma')),
+        onChanged: (v) => setState(() => recentTrauma = v ?? false),
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: numbnessWeakness,
+        title: Text(c('neuro')),
+        onChanged: (v) => setState(() => numbnessWeakness = v ?? false),
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: feverUnwell,
+        title: Text(c('systemic')),
+        onChanged: (v) => setState(() => feverUnwell = v ?? false),
+      ),
+
+      if (hasWarning)
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.warning_amber_rounded),
+              const SizedBox(width: 12),
+              Expanded(child: Text(c('warning'))),
+            ]),
+          ),
+        ),
+
+      const SizedBox(height: 18),
+      FilledButton.icon(
+        onPressed: () {
+          setState(() => checkSaved = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(hasWarning ? c('warning') : c('normal'))),
+          );
+        },
+        icon: const Icon(Icons.save),
+        label: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Text(checkSaved ? c('saved') : c('save')),
+        ),
+      ),
     ]);
   }
 
@@ -394,6 +546,12 @@ class _ShellState extends State<Shell> {
       infoCard(Icons.insights, tr('progTitle'), tr('progText')),
       const SizedBox(height: 12),
       infoCard(Icons.trending_down, tr('pain'), '${pain.round()} / 10'),
+      const SizedBox(height: 12),
+      infoCard(
+        Icons.accessibility_new,
+        tr('check'),
+        checkSaved ? '$bodyArea • $bodySide' : 'Not saved',
+      ),
       const SizedBox(height: 12),
       infoCard(Icons.check_circle, tr('workout'), workoutDone ? '✓ Completed' : 'Pending'),
       const SizedBox(height: 12),
