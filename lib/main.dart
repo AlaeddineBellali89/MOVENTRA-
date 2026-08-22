@@ -6,189 +6,165 @@ class MoventraApp extends StatelessWidget {
   const MoventraApp({super.key});
 
   void showProfile() {
-    final labels = <String, Map<String, String>>{
-      'en': {
-        'title':'Profile','age':'Age','height':'Height (cm)','weight':'Weight (kg)',
-        'sex':'Sex (optional)','male':'Male','female':'Female','preferNot':'Prefer not to say',
-        'activity':'Activity level','sedentary':'Sedentary','light':'Lightly active','active':'Active','athlete':'Athlete',
-        'sport':'Main activity / sport','fitness':'Fitness / gym','running':'Running','football':'Football',
-        'cycling':'Cycling','swimming':'Swimming','other':'Other','days':'Training days / week',
-        'experience':'Experience','beginner':'Beginner','intermediate':'Intermediate','advanced':'Advanced',
-        'goal':'Main goal','general':'General fitness','strength':'Strength','muscle':'Build muscle',
-        'endurance':'Endurance','return':'Return to training','save':'Save profile','saved':'Profile saved',
-        'bmi':'BMI',
-      },
-      'ar': {
-        'title':'الملف الشخصي','age':'العمر','height':'الطول (سم)','weight':'الوزن (كغ)',
-        'sex':'الجنس (اختياري)','male':'ذكر','female':'أنثى','preferNot':'أفضل عدم الإجابة',
-        'activity':'مستوى النشاط','sedentary':'قليل الحركة','light':'نشاط خفيف','active':'نشيط','athlete':'رياضي',
-        'sport':'النشاط / الرياضة الأساسية','fitness':'اللياقة / الجيم','running':'الجري','football':'كرة القدم',
-        'cycling':'الدراجات','swimming':'السباحة','other':'أخرى','days':'أيام التدريب أسبوعيًا',
-        'experience':'الخبرة','beginner':'مبتدئ','intermediate':'متوسط','advanced':'متقدم',
-        'goal':'الهدف الرئيسي','general':'لياقة عامة','strength':'القوة','muscle':'بناء العضلات',
-        'endurance':'التحمل','return':'العودة إلى التدريب','save':'حفظ الملف الشخصي','saved':'تم حفظ الملف الشخصي',
-        'bmi':'مؤشر كتلة الجسم',
-      },
-      'fr': {
-        'title':'Profil','age':'Âge','height':'Taille (cm)','weight':'Poids (kg)',
-        'sex':'Sexe (facultatif)','male':'Homme','female':'Femme','preferNot':'Je préfère ne pas répondre',
-        'activity':"Niveau d'activité",'sedentary':'Sédentaire','light':'Légèrement actif','active':'Actif','athlete':'Sportif',
-        'sport':'Activité / sport principal','fitness':'Fitness / salle','running':'Course','football':'Football',
-        'cycling':'Cyclisme','swimming':'Natation','other':'Autre','days':"Jours d'entraînement / semaine",
-        'experience':'Expérience','beginner':'Débutant','intermediate':'Intermédiaire','advanced':'Avancé',
-        'goal':'Objectif principal','general':'Forme générale','strength':'Force','muscle':'Prise de muscle',
-        'endurance':'Endurance','return':"Retour à l'entraînement",'save':'Enregistrer le profil','saved':'Profil enregistré',
-        'bmi':'IMC',
-      },
-      'de': {
-        'title':'Profil','age':'Alter','height':'Größe (cm)','weight':'Gewicht (kg)',
-        'sex':'Geschlecht (optional)','male':'Männlich','female':'Weiblich','preferNot':'Keine Angabe',
-        'activity':'Aktivitätsniveau','sedentary':'Überwiegend sitzend','light':'Leicht aktiv','active':'Aktiv','athlete':'Sportlich',
-        'sport':'Hauptaktivität / Sport','fitness':'Fitness / Gym','running':'Laufen','football':'Fußball',
-        'cycling':'Radfahren','swimming':'Schwimmen','other':'Andere','days':'Trainingstage / Woche',
-        'experience':'Erfahrung','beginner':'Anfänger','intermediate':'Mittelstufe','advanced':'Fortgeschritten',
-        'goal':'Hauptziel','general':'Allgemeine Fitness','strength':'Kraft','muscle':'Muskelaufbau',
-        'endurance':'Ausdauer','return':'Zurück zum Training','save':'Profil speichern','saved':'Profil gespeichert',
-        'bmi':'BMI',
-      },
-    };
-    String p(String key) => labels[lang]?[key] ?? labels['en']![key]!;
-    final ageController = TextEditingController(text: age.toString());
-    final heightController = TextEditingController(text: heightCm.round().toString());
-    final weightController = TextEditingController(text: weightKg.toStringAsFixed(1));
+    String label(String en, String ar, String fr, String de) {
+      if (lang == 'ar') return ar;
+      if (lang == 'fr') return fr;
+      if (lang == 'de') return de;
+      return en;
+    }
+
+    final ageC = TextEditingController(text: age.toString());
+    final heightC = TextEditingController(text: heightCm.round().toString());
+    final weightC = TextEditingController(text: weightKg.toStringAsFixed(1));
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
-        builder: (sheetContext, setSheetState) {
-          final bmi = weightKg / ((heightCm / 100) * (heightCm / 100));
-          return Directionality(
-            textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20, 20, 20,
-                  MediaQuery.of(sheetContext).viewInsets.bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.person, size: 28),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(p('title'),
-                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
-                        IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close)),
-                      ]),
-                      const SizedBox(height: 18),
-                      TextField(
-                        controller: ageController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: p('age'), border: const OutlineInputBorder()),
-                        onChanged: (v) {
-                          final n = int.tryParse(v);
-                          if (n != null && n > 0 && n < 120) age = n;
-                        },
+        builder: (sheetContext, setSheetState) => Directionality(
+          textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          child: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(children: [
+                      const Icon(Icons.person),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(
+                        label('Profile','الملف الشخصي','Profil','Profil'),
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                      )),
+                      IconButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: heightController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: p('height'), border: const OutlineInputBorder()),
-                        onChanged: (v) {
-                          final n = double.tryParse(v.replaceAll(',', '.'));
-                          if (n != null && n > 80 && n < 250) setSheetState(() => heightCm = n);
-                        },
+                    ]),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: ageC,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: label('Age','العمر','Âge','Alter'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: weightController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(labelText: p('weight'), border: const OutlineInputBorder()),
-                        onChanged: (v) {
-                          final n = double.tryParse(v.replaceAll(',', '.'));
-                          if (n != null && n > 20 && n < 350) setSheetState(() => weightKg = n);
-                        },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: heightC,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: label('Height (cm)','الطول (سم)','Taille (cm)','Größe (cm)'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 8),
-                      Text('${p('bmi')}: ${bmi.toStringAsFixed(1)}',
-                        style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: sex,
-                        decoration: InputDecoration(labelText: p('sex'), border: const OutlineInputBorder()),
-                        items: ['male','female','preferNot']
-                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
-                        onChanged: (v) => setSheetState(() => sex = v ?? sex),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: weightC,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: label('Weight (kg)','الوزن (كغ)','Poids (kg)','Gewicht (kg)'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: activityLevel,
-                        decoration: InputDecoration(labelText: p('activity'), border: const OutlineInputBorder()),
-                        items: ['sedentary','light','active','athlete']
-                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
-                        onChanged: (v) => setSheetState(() => activityLevel = v ?? activityLevel),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: activityLevel,
+                      decoration: InputDecoration(
+                        labelText: label('Activity level','مستوى النشاط',"Niveau d'activité",'Aktivitätsniveau'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: sportType,
-                        decoration: InputDecoration(labelText: p('sport'), border: const OutlineInputBorder()),
-                        items: ['fitness','running','football','cycling','swimming','other']
-                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
-                        onChanged: (v) => setSheetState(() => sportType = v ?? sportType),
+                      items: [
+                        DropdownMenuItem(value:'sedentary', child: Text(label('Sedentary','قليل الحركة','Sédentaire','Überwiegend sitzend'))),
+                        DropdownMenuItem(value:'light', child: Text(label('Lightly active','نشاط خفيف','Légèrement actif','Leicht aktiv'))),
+                        DropdownMenuItem(value:'active', child: Text(label('Active','نشيط','Actif','Aktiv'))),
+                        DropdownMenuItem(value:'athlete', child: Text(label('Athlete','رياضي','Sportif','Sportlich'))),
+                      ],
+                      onChanged: (v) => setSheetState(() => activityLevel = v ?? activityLevel),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: sportType,
+                      decoration: InputDecoration(
+                        labelText: label('Main sport','الرياضة الأساسية','Sport principal','Hauptsport'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      Text('${p('days')}: $trainingDays',
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                      Slider(
-                        value: trainingDays.toDouble(),
-                        min: 0, max: 7, divisions: 7,
-                        label: trainingDays.toString(),
-                        onChanged: (v) => setSheetState(() => trainingDays = v.round()),
+                      items: [
+                        DropdownMenuItem(value:'fitness', child: Text(label('Fitness / gym','الجيم / اللياقة','Fitness / salle','Fitness / Gym'))),
+                        DropdownMenuItem(value:'running', child: Text(label('Running','الجري','Course','Laufen'))),
+                        DropdownMenuItem(value:'football', child: Text(label('Football','كرة القدم','Football','Fußball'))),
+                        DropdownMenuItem(value:'cycling', child: Text(label('Cycling','الدراجات','Cyclisme','Radfahren'))),
+                        DropdownMenuItem(value:'swimming', child: Text(label('Swimming','السباحة','Natation','Schwimmen'))),
+                        DropdownMenuItem(value:'other', child: Text(label('Other','أخرى','Autre','Andere'))),
+                      ],
+                      onChanged: (v) => setSheetState(() => sportType = v ?? sportType),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('${label('Training days / week','أيام التدريب أسبوعيًا',"Jours d'entraînement / semaine",'Trainingstage / Woche')}: $trainingDays'),
+                    Slider(
+                      value: trainingDays.toDouble(),
+                      min: 0, max: 7, divisions: 7,
+                      label: trainingDays.toString(),
+                      onChanged: (v) => setSheetState(() => trainingDays = v.round()),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: experience,
+                      decoration: InputDecoration(
+                        labelText: label('Experience','الخبرة','Expérience','Erfahrung'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        initialValue: experience,
-                        decoration: InputDecoration(labelText: p('experience'), border: const OutlineInputBorder()),
-                        items: ['beginner','intermediate','advanced']
-                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
-                        onChanged: (v) => setSheetState(() => experience = v ?? experience),
+                      items: [
+                        DropdownMenuItem(value:'beginner', child: Text(label('Beginner','مبتدئ','Débutant','Anfänger'))),
+                        DropdownMenuItem(value:'intermediate', child: Text(label('Intermediate','متوسط','Intermédiaire','Mittelstufe'))),
+                        DropdownMenuItem(value:'advanced', child: Text(label('Advanced','متقدم','Avancé','Fortgeschritten'))),
+                      ],
+                      onChanged: (v) => setSheetState(() => experience = v ?? experience),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: goal,
+                      decoration: InputDecoration(
+                        labelText: label('Goal','الهدف','Objectif','Ziel'),
+                        border: const OutlineInputBorder(),
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: goal,
-                        decoration: InputDecoration(labelText: p('goal'), border: const OutlineInputBorder()),
-                        items: ['general','strength','muscle','endurance','return']
-                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
-                        onChanged: (v) => setSheetState(() => goal = v ?? goal),
+                      items: [
+                        DropdownMenuItem(value:'general', child: Text(label('General fitness','لياقة عامة','Forme générale','Allgemeine Fitness'))),
+                        DropdownMenuItem(value:'strength', child: Text(label('Strength','القوة','Force','Kraft'))),
+                        DropdownMenuItem(value:'muscle', child: Text(label('Build muscle','بناء العضلات','Prise de muscle','Muskelaufbau'))),
+                        DropdownMenuItem(value:'endurance', child: Text(label('Endurance','التحمل','Endurance','Ausdauer'))),
+                        DropdownMenuItem(value:'return', child: Text(label('Return to training','العودة للتدريب',"Retour à l'entraînement",'Zurück zum Training'))),
+                      ],
+                      onChanged: (v) => setSheetState(() => goal = v ?? goal),
+                    ),
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () {
+                        final a = int.tryParse(ageC.text);
+                        final h = double.tryParse(heightC.text.replaceAll(',', '.'));
+                        final w = double.tryParse(weightC.text.replaceAll(',', '.'));
+                        setState(() {
+                          if (a != null && a >= 13 && a <= 100) age = a;
+                          if (h != null && h >= 100 && h <= 230) heightCm = h;
+                          if (w != null && w >= 30 && w <= 300) weightKg = w;
+                          profileSaved = true;
+                        });
+                        Navigator.pop(sheetContext);
+                      },
+                      icon: const Icon(Icons.save),
+                      label: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(label('Save profile','حفظ الملف الشخصي','Enregistrer le profil','Profil speichern')),
                       ),
-                      const SizedBox(height: 18),
-                      FilledButton.icon(
-                        onPressed: () {
-                          final parsedAge = int.tryParse(ageController.text);
-                          final parsedHeight = double.tryParse(heightController.text.replaceAll(',', '.'));
-                          final parsedWeight = double.tryParse(weightController.text.replaceAll(',', '.'));
-                          setState(() {
-                            if (parsedAge != null && parsedAge > 0 && parsedAge < 120) age = parsedAge;
-                            if (parsedHeight != null && parsedHeight > 80 && parsedHeight < 250) heightCm = parsedHeight;
-                            if (parsedWeight != null && parsedWeight > 20 && parsedWeight < 350) weightKg = parsedWeight;
-                            profileSaved = true;
-                          });
-                          Navigator.pop(sheetContext);
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(p('saved'))));
-                        },
-                        icon: const Icon(Icons.save),
-                        label: Padding(padding: const EdgeInsets.all(15), child: Text(p('save'))),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -219,29 +195,23 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int page = 0;
   String lang = 'en';
-  double pain = 3;
-  bool workoutDone = false;
-  bool recoveryDone = false;
-  String bodyArea = 'shoulder';
-  String bodySide = 'right';
-  String symptomDuration = 'days';
-  String symptomOnset = 'gradual';
-  bool recentTrauma = false;
-  bool numbnessWeakness = false;
-  bool feverUnwell = false;
-  bool checkSaved = false;
 
   // Profile
   bool profileSaved = false;
   int age = 30;
   double heightCm = 175;
   double weightKg = 75;
-  String sex = 'preferNot';
   String activityLevel = 'active';
   String sportType = 'fitness';
   int trainingDays = 3;
   String experience = 'intermediate';
   String goal = 'general';
+
+  // Body check
+  double pain = 3;
+  String bodyArea = 'shoulder';
+  String bodySide = 'right';
+  bool checkSaved = false;
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -402,6 +372,11 @@ class _ShellState extends State<Shell> {
           ),
           actions: [
             IconButton(
+              onPressed: showProfile,
+              icon: const Icon(Icons.person_outline),
+              tooltip: 'Profile',
+            ),
+            IconButton(
               onPressed: chooseLanguage,
               icon: const Icon(Icons.language),
               tooltip: 'Language',
@@ -495,6 +470,15 @@ class _ShellState extends State<Shell> {
         tr('slogan'),
         style: const TextStyle(fontSize: 18),
       ),
+      const SizedBox(height: 18),
+      infoCard(
+        Icons.person,
+        lang == 'ar' ? 'الملف الشخصي' : (lang == 'fr' ? 'Profil' : (lang == 'de' ? 'Profil' : 'Profile')),
+        profileSaved
+            ? '$age • ${heightCm.round()} cm • ${weightKg.toStringAsFixed(1)} kg • $activityLevel'
+            : (lang == 'ar' ? 'اضغط لإكمال بياناتك' : 'Tap to complete your details'),
+        onTap: showProfile,
+      ),
       const SizedBox(height: 25),
       infoCard(Icons.fitness_center, tr('plan'), tr('push'), onTap: () => setState(() => page = 2)),
       const SizedBox(height: 12),
@@ -520,168 +504,71 @@ class _ShellState extends State<Shell> {
   }
 
   Widget checkPage() {
-    final labels = <String, Map<String, String>>{
-      'en': {
-        'area':'Pain area','side':'Side','duration':'Duration','onset':'How did it start?',
-        'shoulder':'Shoulder','neck':'Neck','upperBack':'Upper back','lowerBack':'Lower back',
-        'elbow':'Elbow','wrist':'Wrist / hand','hip':'Hip','knee':'Knee','ankle':'Ankle / foot',
-        'right':'Right','left':'Left','center':'Center / both',
-        'today':'Today','days':'A few days','weeks':'A few weeks','months':'Months or longer',
-        'gradual':'Gradually','training':'During / after training','sudden':'Suddenly',
-        'safety':'Safety check','trauma':'Recent fall, collision or significant injury',
-        'neuro':'New numbness, marked weakness or loss of control',
-        'systemic':'Fever or feeling seriously unwell',
-        'save':'Save Body Check','saved':'Body Check saved',
-        'warning':'Your answers include a warning sign. Pause strenuous training and seek qualified medical assessment.',
-        'normal':'Check saved. MOVENTRA can now adapt the training and recovery screens.',
-      },
-      'ar': {
-        'area':'منطقة الألم','side':'الجهة','duration':'مدة الأعراض','onset':'كيف بدأ الألم؟',
-        'shoulder':'الكتف','neck':'الرقبة','upperBack':'أعلى الظهر','lowerBack':'أسفل الظهر',
-        'elbow':'المرفق','wrist':'الرسغ / اليد','hip':'الورك','knee':'الركبة','ankle':'الكاحل / القدم',
-        'right':'اليمين','left':'اليسار','center':'الوسط / الجهتان',
-        'today':'اليوم','days':'عدة أيام','weeks':'عدة أسابيع','months':'أشهر أو أكثر',
-        'gradual':'تدريجيًا','training':'أثناء / بعد التمرين','sudden':'فجأة',
-        'safety':'فحص الأمان','trauma':'سقوط أو اصطدام أو إصابة قوية مؤخرًا',
-        'neuro':'خدر جديد أو ضعف واضح أو فقدان التحكم',
-        'systemic':'حمّى أو شعور بمرض شديد',
-        'save':'حفظ فحص الجسم','saved':'تم حفظ فحص الجسم',
-        'warning':'إجاباتك تتضمن علامة تستدعي الانتباه. أوقف التدريب الشديد واطلب تقييمًا طبيًا مختصًا.',
-        'normal':'تم حفظ الفحص. يمكن لـ MOVENTRA الآن تكييف شاشات التدريب والتعافي.',
-      },
-      'fr': {
-        'area':'Zone douloureuse','side':'Côté','duration':'Durée','onset':'Comment cela a commencé ?',
-        'shoulder':'Épaule','neck':'Cou','upperBack':'Haut du dos','lowerBack':'Bas du dos',
-        'elbow':'Coude','wrist':'Poignet / main','hip':'Hanche','knee':'Genou','ankle':'Cheville / pied',
-        'right':'Droite','left':'Gauche','center':'Centre / les deux',
-        'today':"Aujourd'hui",'days':'Quelques jours','weeks':'Quelques semaines','months':'Des mois ou plus',
-        'gradual':'Progressivement','training':"Pendant / après l'entraînement",'sudden':'Soudainement',
-        'safety':'Vérification de sécurité','trauma':'Chute, collision ou traumatisme important récent',
-        'neuro':'Nouvel engourdissement, faiblesse marquée ou perte de contrôle',
-        'systemic':'Fièvre ou sensation de maladie importante',
-        'save':'Enregistrer le bilan','saved':'Bilan enregistré',
-        'warning':"Vos réponses comportent un signe d'alerte. Évitez l'entraînement intense et demandez une évaluation médicale qualifiée.",
-        'normal':"Bilan enregistré. MOVENTRA peut maintenant adapter l'entraînement et la récupération.",
-      },
-      'de': {
-        'area':'Schmerzbereich','side':'Seite','duration':'Dauer','onset':'Wie hat es begonnen?',
-        'shoulder':'Schulter','neck':'Nacken','upperBack':'Oberer Rücken','lowerBack':'Unterer Rücken',
-        'elbow':'Ellenbogen','wrist':'Handgelenk / Hand','hip':'Hüfte','knee':'Knie','ankle':'Knöchel / Fuß',
-        'right':'Rechts','left':'Links','center':'Mitte / beide Seiten',
-        'today':'Heute','days':'Einige Tage','weeks':'Einige Wochen','months':'Monate oder länger',
-        'gradual':'Allmählich','training':'Beim / nach dem Training','sudden':'Plötzlich',
-        'safety':'Sicherheitscheck','trauma':'Kürzlicher Sturz, Zusammenstoß oder stärkere Verletzung',
-        'neuro':'Neue Taubheit, deutliche Schwäche oder Kontrollverlust',
-        'systemic':'Fieber oder starkes Krankheitsgefühl',
-        'save':'Körper-Check speichern','saved':'Körper-Check gespeichert',
-        'warning':'Deine Antworten enthalten ein Warnzeichen. Pausiere intensives Training und lass dich qualifiziert medizinisch untersuchen.',
-        'normal':'Check gespeichert. MOVENTRA kann Training und Erholung jetzt anpassen.',
-      },
-    };
+    String l(String en, String ar, String fr, String de) {
+      if (lang == 'ar') return ar;
+      if (lang == 'fr') return fr;
+      if (lang == 'de') return de;
+      return en;
+    }
 
-    String c(String key) => labels[lang]?[key] ?? labels['en']![key]!;
-    final hasWarning = recentTrauma || numbnessWeakness || feverUnwell;
+    final areas = <String, String>{
+      'shoulder': l('Shoulder','الكتف','Épaule','Schulter'),
+      'neck': l('Neck','الرقبة','Cou','Nacken'),
+      'upperBack': l('Upper back','أعلى الظهر','Haut du dos','Oberer Rücken'),
+      'lowerBack': l('Lower back','أسفل الظهر','Bas du dos','Unterer Rücken'),
+      'elbow': l('Elbow','المرفق','Coude','Ellenbogen'),
+      'wrist': l('Wrist / hand','الرسغ / اليد','Poignet / main','Handgelenk / Hand'),
+      'hip': l('Hip','الورك','Hanche','Hüfte'),
+      'knee': l('Knee','الركبة','Genou','Knie'),
+      'ankle': l('Ankle / foot','الكاحل / القدم','Cheville / pied','Knöchel / Fuß'),
+    };
 
     return pageBody([
       Text(tr('body'), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      Text('${c(bodyArea)} • ${c(bodySide)}', style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 22),
-
+      const SizedBox(height: 20),
       DropdownButtonFormField<String>(
-        initialValue: bodyArea,
-        decoration: InputDecoration(labelText: c('area'), border: const OutlineInputBorder()),
-        items: ['shoulder','neck','upperBack','lowerBack','elbow','wrist','hip','knee','ankle']
-            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
+        value: bodyArea,
+        decoration: InputDecoration(
+          labelText: l('Pain area','منطقة الألم','Zone douloureuse','Schmerzbereich'),
+          border: const OutlineInputBorder(),
+        ),
+        items: areas.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
         onChanged: (v) => setState(() => bodyArea = v ?? bodyArea),
       ),
       const SizedBox(height: 14),
-
       SegmentedButton<String>(
         segments: [
-          ButtonSegment(value: 'right', label: Text(c('right'))),
-          ButtonSegment(value: 'left', label: Text(c('left'))),
-          ButtonSegment(value: 'center', label: Text(c('center'))),
+          ButtonSegment(value:'right', label: Text(l('Right','يمين','Droite','Rechts'))),
+          ButtonSegment(value:'left', label: Text(l('Left','يسار','Gauche','Links'))),
+          ButtonSegment(value:'both', label: Text(l('Both','الجهتان','Les deux','Beide'))),
         ],
         selected: {bodySide},
         onSelectionChanged: (v) => setState(() => bodySide = v.first),
       ),
       const SizedBox(height: 22),
-
       Text('${tr('pain')}: ${pain.round()} / 10',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       Slider(
-        value: pain,
-        min: 0,
-        max: 10,
-        divisions: 10,
+        value: pain, min: 0, max: 10, divisions: 10,
         label: pain.round().toString(),
-        onChanged: (value) => setState(() => pain = value),
+        onChanged: (v) => setState(() => pain = v),
       ),
-      const SizedBox(height: 14),
-
-      DropdownButtonFormField<String>(
-        initialValue: symptomDuration,
-        decoration: InputDecoration(labelText: c('duration'), border: const OutlineInputBorder()),
-        items: ['today','days','weeks','months']
-            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
-        onChanged: (v) => setState(() => symptomDuration = v ?? symptomDuration),
-      ),
-      const SizedBox(height: 14),
-
-      DropdownButtonFormField<String>(
-        initialValue: symptomOnset,
-        decoration: InputDecoration(labelText: c('onset'), border: const OutlineInputBorder()),
-        items: ['gradual','training','sudden']
-            .map((v) => DropdownMenuItem(value: v, child: Text(c(v)))).toList(),
-        onChanged: (v) => setState(() => symptomOnset = v ?? symptomOnset),
-      ),
-      const SizedBox(height: 22),
-
-      Text(c('safety'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        value: recentTrauma,
-        title: Text(c('trauma')),
-        onChanged: (v) => setState(() => recentTrauma = v ?? false),
-      ),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        value: numbnessWeakness,
-        title: Text(c('neuro')),
-        onChanged: (v) => setState(() => numbnessWeakness = v ?? false),
-      ),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        value: feverUnwell,
-        title: Text(c('systemic')),
-        onChanged: (v) => setState(() => feverUnwell = v ?? false),
-      ),
-
-      if (hasWarning)
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Icon(Icons.warning_amber_rounded),
-              const SizedBox(width: 12),
-              Expanded(child: Text(c('warning'))),
-            ]),
-          ),
-        ),
-
+      const SizedBox(height: 12),
+      infoCard(Icons.favorite, tr('ready'), '${(10 - pain * 0.7).round().clamp(1, 10)} / 10'),
       const SizedBox(height: 18),
       FilledButton.icon(
         onPressed: () {
           setState(() => checkSaved = true);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(hasWarning ? c('warning') : c('normal'))),
+            SnackBar(content: Text(l('Body Check saved','تم حفظ فحص الجسم','Bilan enregistré','Körper-Check gespeichert'))),
           );
         },
         icon: const Icon(Icons.save),
         label: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Text(checkSaved ? c('saved') : c('save')),
+          padding: const EdgeInsets.all(14),
+          child: Text(checkSaved
+            ? l('Saved','تم الحفظ','Enregistré','Gespeichert')
+            : l('Save Body Check','حفظ فحص الجسم','Enregistrer le bilan','Körper-Check speichern')),
         ),
       ),
     ]);
@@ -697,16 +584,16 @@ class _ShellState extends State<Shell> {
         ),
       ),
       const SizedBox(height: 20),
-      infoCard(Icons.fitness_center, tr('push'), tr('exercise')),
-      const SizedBox(height: 18),
-      FilledButton.icon(
-        onPressed: () => setState(() => workoutDone = true),
-        icon: Icon(workoutDone ? Icons.check_circle : Icons.play_arrow),
-        label: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Text(workoutDone ? '✓ Completed' : 'Complete workout'),
-        ),
+      infoCard(
+        Icons.fitness_center,
+        tr('push'),
+        checkSaved
+            ? '${tr('exercise')} • $bodyArea/$bodySide • ${pain.round()}/10'
+            : tr('exercise'),
       ),
+      const SizedBox(height: 12),
+      if (profileSaved)
+        infoCard(Icons.person, tr('ready'), '$activityLevel • $trainingDays days/week • $goal'),
     ]);
   }
 
@@ -720,15 +607,12 @@ class _ShellState extends State<Shell> {
         ),
       ),
       const SizedBox(height: 20),
-      infoCard(Icons.healing, tr('focus'), tr('recText')),
-      const SizedBox(height: 18),
-      FilledButton.icon(
-        onPressed: () => setState(() => recoveryDone = true),
-        icon: Icon(recoveryDone ? Icons.check_circle : Icons.healing),
-        label: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Text(recoveryDone ? '✓ Completed' : 'Complete recovery'),
-        ),
+      infoCard(
+        Icons.healing,
+        tr('focus'),
+        checkSaved
+            ? '${tr('recText')} • $bodyArea/$bodySide • ${pain.round()}/10'
+            : tr('recText'),
       ),
     ]);
   }
@@ -745,17 +629,11 @@ class _ShellState extends State<Shell> {
       const SizedBox(height: 20),
       infoCard(Icons.insights, tr('progTitle'), tr('progText')),
       const SizedBox(height: 12),
-      infoCard(Icons.trending_down, tr('pain'), '${pain.round()} / 10'),
+      if (profileSaved)
+        infoCard(Icons.person, 'Profile', '$age • ${heightCm.round()} cm • ${weightKg.toStringAsFixed(1)} kg • $activityLevel'),
       const SizedBox(height: 12),
-      infoCard(
-        Icons.accessibility_new,
-        tr('check'),
-        checkSaved ? '$bodyArea • $bodySide' : 'Not saved',
-      ),
-      const SizedBox(height: 12),
-      infoCard(Icons.check_circle, tr('workout'), workoutDone ? '✓ Completed' : 'Pending'),
-      const SizedBox(height: 12),
-      infoCard(Icons.healing, tr('recovery'), recoveryDone ? '✓ Completed' : 'Pending'),
+      if (checkSaved)
+        infoCard(Icons.monitor_heart, tr('check'), '$bodyArea/$bodySide • ${pain.round()}/10'),
     ]);
   }
 }
