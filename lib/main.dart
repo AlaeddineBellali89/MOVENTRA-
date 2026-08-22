@@ -52,6 +52,9 @@ class _ShellState extends State<Shell> {
   String bodySide = 'right';
   bool checkSaved = false;
   final Set<String> painfulZones = <String>{};
+  bool bodyBackView = false;
+  bool trainingDone = false;
+  bool recoveryDone = false;
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -563,12 +566,16 @@ class _ShellState extends State<Shell> {
       return en;
     }
 
-    final zones = <Map<String, dynamic>>[
+    final frontZones = <Map<String, dynamic>>[
       {'id':'neck','label':l('Neck','الرقبة','Cou','Nacken'),'top':22.0,'left':112.0,'w':56.0,'h':34.0},
       {'id':'leftShoulder','label':l('Left shoulder','الكتف الأيسر','Épaule gauche','Linke Schulter'),'top':58.0,'left':58.0,'w':58.0,'h':42.0},
       {'id':'rightShoulder','label':l('Right shoulder','الكتف الأيمن','Épaule droite','Rechte Schulter'),'top':58.0,'left':164.0,'w':58.0,'h':42.0},
-      {'id':'upperBack','label':l('Upper back / chest','أعلى الظهر / الصدر','Haut du dos / poitrine','Oberer Rücken / Brust'),'top':88.0,'left':103.0,'w':74.0,'h':70.0},
-      {'id':'lowerBack','label':l('Lower back','أسفل الظهر','Bas du dos','Unterer Rücken'),'top':158.0,'left':105.0,'w':70.0,'h':54.0},
+      {'id':'chest','label':l('Chest','الصدر','Poitrine','Brust'),'top':90.0,'left':103.0,'w':74.0,'h':62.0},
+      {'id':'abdomen','label':l('Abdomen','البطن','Abdomen','Bauch'),'top':154.0,'left':105.0,'w':70.0,'h':58.0},
+      {'id':'leftElbow','label':l('Left elbow','المرفق الأيسر','Coude gauche','Linker Ellenbogen'),'top':142.0,'left':68.0,'w':38.0,'h':42.0},
+      {'id':'rightElbow','label':l('Right elbow','المرفق الأيمن','Coude droit','Rechter Ellenbogen'),'top':142.0,'left':174.0,'w':38.0,'h':42.0},
+      {'id':'leftWrist','label':l('Left wrist / hand','الرسغ / اليد اليسرى','Poignet / main gauche','Linkes Handgelenk / Hand'),'top':218.0,'left':61.0,'w':46.0,'h':42.0},
+      {'id':'rightWrist','label':l('Right wrist / hand','الرسغ / اليد اليمنى','Poignet / main droite','Rechtes Handgelenk / Hand'),'top':218.0,'left':173.0,'w':46.0,'h':42.0},
       {'id':'leftHip','label':l('Left hip','الورك الأيسر','Hanche gauche','Linke Hüfte'),'top':204.0,'left':82.0,'w':48.0,'h':52.0},
       {'id':'rightHip','label':l('Right hip','الورك الأيمن','Hanche droite','Rechte Hüfte'),'top':204.0,'left':150.0,'w':48.0,'h':52.0},
       {'id':'leftKnee','label':l('Left knee','الركبة اليسرى','Genou gauche','Linkes Knie'),'top':318.0,'left':89.0,'w':42.0,'h':42.0},
@@ -577,6 +584,22 @@ class _ShellState extends State<Shell> {
       {'id':'rightAnkle','label':l('Right ankle / foot','الكاحل / القدم اليمنى','Cheville / pied droit','Rechter Knöchel / Fuß'),'top':420.0,'left':148.0,'w':50.0,'h':42.0},
     ];
 
+    final backZones = <Map<String, dynamic>>[
+      {'id':'backNeck','label':l('Back of neck','خلف الرقبة','Arrière du cou','Nacken hinten'),'top':22.0,'left':112.0,'w':56.0,'h':34.0},
+      {'id':'leftRearShoulder','label':l('Left rear shoulder','خلف الكتف الأيسر','Épaule gauche arrière','Linke hintere Schulter'),'top':58.0,'left':58.0,'w':58.0,'h':42.0},
+      {'id':'rightRearShoulder','label':l('Right rear shoulder','خلف الكتف الأيمن','Épaule droite arrière','Rechte hintere Schulter'),'top':58.0,'left':164.0,'w':58.0,'h':42.0},
+      {'id':'upperBack','label':l('Upper back','أعلى الظهر','Haut du dos','Oberer Rücken'),'top':88.0,'left':103.0,'w':74.0,'h':70.0},
+      {'id':'lowerBack','label':l('Lower back','أسفل الظهر','Bas du dos','Unterer Rücken'),'top':158.0,'left':105.0,'w':70.0,'h':58.0},
+      {'id':'leftGlute','label':l('Left glute','الألية اليسرى','Fessier gauche','Linkes Gesäß'),'top':212.0,'left':84.0,'w':48.0,'h':52.0},
+      {'id':'rightGlute','label':l('Right glute','الألية اليمنى','Fessier droit','Rechtes Gesäß'),'top':212.0,'left':148.0,'w':48.0,'h':52.0},
+      {'id':'leftHamstring','label':l('Left hamstring','خلف الفخذ الأيسر','Ischio-jambier gauche','Linke hintere Oberschenkel'),'top':260.0,'left':88.0,'w':44.0,'h':70.0},
+      {'id':'rightHamstring','label':l('Right hamstring','خلف الفخذ الأيمن','Ischio-jambier droit','Rechte hintere Oberschenkel'),'top':260.0,'left':148.0,'w':44.0,'h':70.0},
+      {'id':'leftCalf','label':l('Left calf','ربلة الساق اليسرى','Mollet gauche','Linke Wade'),'top':354.0,'left':88.0,'w':44.0,'h':70.0},
+      {'id':'rightCalf','label':l('Right calf','ربلة الساق اليمنى','Mollet droit','Rechte Wade'),'top':354.0,'left':148.0,'w':44.0,'h':70.0},
+    ];
+
+    final zones = bodyBackView ? backZones : frontZones;
+
     void toggleZone(Map<String, dynamic> z) {
       final id = z['id'] as String;
       setState(() {
@@ -584,9 +607,11 @@ class _ShellState extends State<Shell> {
         final low = id.toLowerCase();
         bodySide = low.startsWith('left') ? 'left' : (low.startsWith('right') ? 'right' : 'both');
         if (low.contains('shoulder')) bodyArea = 'shoulder';
+        else if (low.contains('elbow')) bodyArea = 'elbow';
+        else if (low.contains('wrist')) bodyArea = 'wrist';
         else if (low.contains('knee')) bodyArea = 'knee';
-        else if (low.contains('hip')) bodyArea = 'hip';
-        else if (low.contains('ankle')) bodyArea = 'ankle';
+        else if (low.contains('hip') || low.contains('glute')) bodyArea = 'hip';
+        else if (low.contains('ankle') || low.contains('calf')) bodyArea = 'ankle';
         else if (low.contains('neck')) bodyArea = 'neck';
         else if (low.contains('upperback')) bodyArea = 'upperBack';
         else if (low.contains('lowerback')) bodyArea = 'lowerBack';
@@ -596,70 +621,74 @@ class _ShellState extends State<Shell> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        SegmentedButton<bool>(
+          segments: [
+            ButtonSegment(value:false, icon:const Icon(Icons.accessibility_new),
+              label:Text(l('Front','أمام','Avant','Vorne'))),
+            ButtonSegment(value:true, icon:const Icon(Icons.accessibility),
+              label:Text(l('Back','خلف','Arrière','Hinten'))),
+          ],
+          selected:{bodyBackView},
+          onSelectionChanged:(v)=>setState(()=>bodyBackView=v.first),
         ),
-        const SizedBox(height: 8),
-        Text(l(
-          'Selected areas turn red. Tap again to remove.',
+        const SizedBox(height:14),
+        Text(l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
+          style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),
+        const SizedBox(height:6),
+        Text(l('Selected areas turn red. Tap again to remove.',
           'المناطق المختارة تصبح حمراء. اضغط مرة أخرى لإلغائها.',
           'Les zones sélectionnées deviennent rouges. Touchez à nouveau pour retirer.',
-          'Ausgewählte Bereiche werden rot. Erneut tippen zum Entfernen.'
-        )),
-        const SizedBox(height: 14),
+          'Ausgewählte Bereiche werden rot. Erneut tippen zum Entfernen.')),
+        const SizedBox(height:14),
         Center(
-          child: SizedBox(
-            width: 280,
-            height: 480,
-            child: Stack(
-              children: [
-                Positioned(left:110, top:0, child: Container(width:60,height:60,
-                  decoration: BoxDecoration(shape:BoxShape.circle,border:Border.all(color:Colors.white54,width:2)))),
-                Positioned(left:100, top:55, child: Container(width:80,height:180,
-                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(38)))),
-                Positioned(left:72, top:62, child: Container(width:28,height:190,
-                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
-                Positioned(left:180, top:62, child: Container(width:28,height:190,
-                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
-                Positioned(left:103, top:230, child: Container(width:32,height:225,
-                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
-                Positioned(left:145, top:230, child: Container(width:32,height:225,
-                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
-                ...zones.map((z) {
-                  final selected = painfulZones.contains(z['id']);
-                  return Positioned(
-                    top:z['top'], left:z['left'], width:z['w'], height:z['h'],
-                    child: Semantics(
-                      button:true, label:z['label'],
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => toggleZone(z),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds:180),
-                          decoration: BoxDecoration(
-                            color: selected ? Colors.red.withValues(alpha:0.72) : Colors.transparent,
-                            border: Border.all(
-                              color: selected ? Colors.redAccent : Colors.transparent,
-                              width:2,
-                            ),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
+          child:SizedBox(
+            width:280,height:480,
+            child:Stack(children:[
+              Positioned(left:110,top:0,child:Container(width:60,height:60,
+                decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:Colors.white54,width:2)))),
+              Positioned(left:100,top:55,child:Container(width:80,height:180,
+                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(38)))),
+              Positioned(left:72,top:62,child:Container(width:28,height:190,
+                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+              Positioned(left:180,top:62,child:Container(width:28,height:190,
+                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+              Positioned(left:103,top:230,child:Container(width:32,height:225,
+                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+              Positioned(left:145,top:230,child:Container(width:32,height:225,
+                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+              ...zones.map((z){
+                final selected=painfulZones.contains(z['id']);
+                return Positioned(
+                  top:z['top'],left:z['left'],width:z['w'],height:z['h'],
+                  child:Semantics(
+                    button:true,label:z['label'],
+                    child:InkWell(
+                      borderRadius:BorderRadius.circular(18),
+                      onTap:()=>toggleZone(z),
+                      child:AnimatedContainer(
+                        duration:const Duration(milliseconds:180),
+                        decoration:BoxDecoration(
+                          color:selected?Colors.red.withValues(alpha:0.72):Colors.transparent,
+                          border:Border.all(color:selected?Colors.redAccent:Colors.transparent,width:2),
+                          borderRadius:BorderRadius.circular(18),
                         ),
                       ),
                     ),
-                  );
-                }),
-              ],
-            ),
+                  ),
+                );
+              }),
+            ]),
           ),
         ),
-        if (painfulZones.isNotEmpty)
-          Text(
-            '${l('Selected','المحدد','Sélection','Ausgewählt')}: ${painfulZones.length}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+        if(painfulZones.isNotEmpty) ...[
+          Text('${l('Selected','المحدد','Sélection','Ausgewählt')}: ${painfulZones.length}',
+            textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.bold)),
+          TextButton.icon(
+            onPressed:()=>setState(()=>painfulZones.clear()),
+            icon:const Icon(Icons.restart_alt),
+            label:Text(l('Clear body map','مسح تحديد الجسم','Effacer la sélection','Körperauswahl löschen')),
           ),
+        ],
       ],
     );
   }
@@ -737,45 +766,128 @@ class _ShellState extends State<Shell> {
     ]);
   }
 
+  String adaptiveTrainingText() {
+    if (!checkSaved) return tr('exercise');
+    if (pain >= 7) {
+      return lang == 'ar'
+          ? 'الألم مرتفع. تجنب التدريب الشديد على المنطقة المحددة وركز على الحركة الخفيفة فقط.'
+          : 'Pain is high. Avoid strenuous loading of the selected area and keep activity light.';
+    }
+    if (pain >= 4) {
+      return lang == 'ar'
+          ? 'خفّض الحمل والمدى حسب الأعراض. لا تدفع خلال ألم متزايد.'
+          : 'Reduce load and range according to symptoms. Do not push through increasing pain.';
+    }
+    return lang == 'ar'
+        ? 'الأعراض منخفضة: يمكن التدريب بحمل متحكم به مع مراقبة الاستجابة.'
+        : 'Symptoms are low: controlled training can continue while monitoring the response.';
+  }
+
+  String adaptiveRecoveryText() {
+    if (!checkSaved) return tr('recText');
+    if (pain >= 7) {
+      return lang == 'ar'
+          ? 'تعافٍ خفيف ومراقبة الأعراض. الألم الشديد أو المتفاقم يحتاج تقييمًا مختصًا.'
+          : 'Use gentle recovery and monitor symptoms. Severe or worsening pain needs professional assessment.';
+    }
+    return lang == 'ar'
+        ? 'حركة مريحة وحمل تدريجي ونوم وتعافٍ مناسب، مع إعادة تقييم الألم في الفحص القادم.'
+        : 'Comfortable movement, gradual loading, sleep and recovery, then reassess pain at the next check.';
+  }
+
+  Widget mediaPlaceholder(String title, IconData icon) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(children:[
+          Icon(icon,size:34),
+          const SizedBox(width:14),
+          Expanded(child:Column(
+            crossAxisAlignment:CrossAxisAlignment.start,
+            children:[
+              Text(title,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:17)),
+              const SizedBox(height:4),
+              Text(lang=='ar'
+                ? 'مكان جاهز لإضافة صورة أو فيديو التمرين بعد اعتماد المحتوى.'
+                : 'Ready for an approved exercise image or video in the media library.'),
+            ],
+          )),
+        ]),
+      ),
+    );
+  }
+
   Widget workoutPage() {
     return pageBody([
-      Text(
-        tr('session'),
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 20),
+      Text(tr('session'),style:const TextStyle(fontSize:28,fontWeight:FontWeight.bold)),
+      const SizedBox(height:20),
       infoCard(
         Icons.fitness_center,
         tr('push'),
-        checkSaved
-            ? '${tr('exercise')} • $bodyArea/$bodySide • ${pain.round()}/10'
-            : tr('exercise'),
+        checkSaved ? adaptiveTrainingText() : tr('exercise'),
       ),
-      const SizedBox(height: 12),
-      if (profileSaved)
-        infoCard(Icons.person, tr('ready'), '$activityLevel • $trainingDays days/week • $goal'),
+      const SizedBox(height:12),
+      if(profileSaved)
+        infoCard(Icons.person,tr('ready'),'$activityLevel • $trainingDays days/week • $goal'),
+      if(checkSaved) ...[
+        const SizedBox(height:12),
+        infoCard(Icons.accessibility_new,tr('check'),
+          '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} zone(s)'),
+      ],
+      const SizedBox(height:18),
+      mediaPlaceholder(
+        lang=='ar'?'شرح التمرين بالصورة':'Exercise image guide',
+        Icons.image_outlined,
+      ),
+      const SizedBox(height:10),
+      mediaPlaceholder(
+        lang=='ar'?'فيديو التمرين':'Exercise video',
+        Icons.play_circle_outline,
+      ),
+      const SizedBox(height:18),
+      FilledButton.icon(
+        onPressed:()=>setState(()=>trainingDone=!trainingDone),
+        icon:Icon(trainingDone?Icons.check_circle:Icons.circle_outlined),
+        label:Padding(
+          padding:const EdgeInsets.all(14),
+          child:Text(trainingDone
+            ? (lang=='ar'?'تم تسجيل التدريب':'Training completed')
+            : (lang=='ar'?'تسجيل التدريب كمكتمل':'Mark training complete')),
+        ),
+      ),
     ]);
   }
 
   Widget recoveryPage() {
     return pageBody([
-      Text(
-        tr('recTitle'),
-        style: const TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
+      Text(tr('recTitle'),style:const TextStyle(fontSize:28,fontWeight:FontWeight.bold)),
+      const SizedBox(height:20),
+      infoCard(Icons.healing,tr('focus'),adaptiveRecoveryText()),
+      if(checkSaved) ...[
+        const SizedBox(height:12),
+        infoCard(Icons.monitor_heart,tr('pain'),
+          '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} zone(s)'),
+      ],
+      const SizedBox(height:18),
+      mediaPlaceholder(
+        lang=='ar'?'صورة تمرين التعافي':'Recovery exercise image',
+        Icons.image_outlined,
       ),
-      const SizedBox(height: 20),
-      infoCard(
-        Icons.healing,
-        tr('focus'),
-        checkSaved
-            ? '${tr('recText')} • $bodyArea/$bodySide • ${pain.round()}/10'
-            : tr('recText'),
+      const SizedBox(height:10),
+      mediaPlaceholder(
+        lang=='ar'?'فيديو تمرين التعافي':'Recovery exercise video',
+        Icons.play_circle_outline,
+      ),
+      const SizedBox(height:18),
+      FilledButton.icon(
+        onPressed:()=>setState(()=>recoveryDone=!recoveryDone),
+        icon:Icon(recoveryDone?Icons.check_circle:Icons.circle_outlined),
+        label:Padding(
+          padding:const EdgeInsets.all(14),
+          child:Text(recoveryDone
+            ? (lang=='ar'?'تم تسجيل التعافي':'Recovery completed')
+            : (lang=='ar'?'تسجيل التعافي كمكتمل':'Mark recovery complete')),
+        ),
       ),
     ]);
   }
@@ -801,6 +913,12 @@ class _ShellState extends State<Shell> {
           tr('check'),
           '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} selected zone(s)',
         ),
+      const SizedBox(height:12),
+      infoCard(
+        Icons.task_alt,
+        lang=='ar'?'إنجاز اليوم':'Today completion',
+        '${trainingDone ? '✓' : '○'} Training   ${recoveryDone ? '✓' : '○'} Recovery',
+      ),
     ]);
   }
 }
