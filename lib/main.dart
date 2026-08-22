@@ -366,17 +366,7 @@ class _ShellState extends State<Shell> {
     ]);
   }
 
-        selectedIndex: page,
-        onDestinationSelected: (v)=>setState(()=>page=v),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label:'Today'),
-          NavigationDestination(icon: Icon(Icons.accessibility_new), label:'Check'),
-          NavigationDestination(icon: Icon(Icons.fitness_center), label:'Workout'),
-          NavigationDestination(icon: Icon(Icons.healing), label:'Recovery'),
-          NavigationDestination(icon: Icon(Icons.insights), label:'Progress'),
-        ],
-      ),
-    );
+
   }
 }
 
