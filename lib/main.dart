@@ -5,6 +5,194 @@ void main() => runApp(const MoventraApp());
 class MoventraApp extends StatelessWidget {
   const MoventraApp({super.key});
 
+  void showProfile() {
+    final labels = <String, Map<String, String>>{
+      'en': {
+        'title':'Profile','age':'Age','height':'Height (cm)','weight':'Weight (kg)',
+        'sex':'Sex (optional)','male':'Male','female':'Female','preferNot':'Prefer not to say',
+        'activity':'Activity level','sedentary':'Sedentary','light':'Lightly active','active':'Active','athlete':'Athlete',
+        'sport':'Main activity / sport','fitness':'Fitness / gym','running':'Running','football':'Football',
+        'cycling':'Cycling','swimming':'Swimming','other':'Other','days':'Training days / week',
+        'experience':'Experience','beginner':'Beginner','intermediate':'Intermediate','advanced':'Advanced',
+        'goal':'Main goal','general':'General fitness','strength':'Strength','muscle':'Build muscle',
+        'endurance':'Endurance','return':'Return to training','save':'Save profile','saved':'Profile saved',
+        'bmi':'BMI',
+      },
+      'ar': {
+        'title':'الملف الشخصي','age':'العمر','height':'الطول (سم)','weight':'الوزن (كغ)',
+        'sex':'الجنس (اختياري)','male':'ذكر','female':'أنثى','preferNot':'أفضل عدم الإجابة',
+        'activity':'مستوى النشاط','sedentary':'قليل الحركة','light':'نشاط خفيف','active':'نشيط','athlete':'رياضي',
+        'sport':'النشاط / الرياضة الأساسية','fitness':'اللياقة / الجيم','running':'الجري','football':'كرة القدم',
+        'cycling':'الدراجات','swimming':'السباحة','other':'أخرى','days':'أيام التدريب أسبوعيًا',
+        'experience':'الخبرة','beginner':'مبتدئ','intermediate':'متوسط','advanced':'متقدم',
+        'goal':'الهدف الرئيسي','general':'لياقة عامة','strength':'القوة','muscle':'بناء العضلات',
+        'endurance':'التحمل','return':'العودة إلى التدريب','save':'حفظ الملف الشخصي','saved':'تم حفظ الملف الشخصي',
+        'bmi':'مؤشر كتلة الجسم',
+      },
+      'fr': {
+        'title':'Profil','age':'Âge','height':'Taille (cm)','weight':'Poids (kg)',
+        'sex':'Sexe (facultatif)','male':'Homme','female':'Femme','preferNot':'Je préfère ne pas répondre',
+        'activity':"Niveau d'activité",'sedentary':'Sédentaire','light':'Légèrement actif','active':'Actif','athlete':'Sportif',
+        'sport':'Activité / sport principal','fitness':'Fitness / salle','running':'Course','football':'Football',
+        'cycling':'Cyclisme','swimming':'Natation','other':'Autre','days':"Jours d'entraînement / semaine",
+        'experience':'Expérience','beginner':'Débutant','intermediate':'Intermédiaire','advanced':'Avancé',
+        'goal':'Objectif principal','general':'Forme générale','strength':'Force','muscle':'Prise de muscle',
+        'endurance':'Endurance','return':"Retour à l'entraînement",'save':'Enregistrer le profil','saved':'Profil enregistré',
+        'bmi':'IMC',
+      },
+      'de': {
+        'title':'Profil','age':'Alter','height':'Größe (cm)','weight':'Gewicht (kg)',
+        'sex':'Geschlecht (optional)','male':'Männlich','female':'Weiblich','preferNot':'Keine Angabe',
+        'activity':'Aktivitätsniveau','sedentary':'Überwiegend sitzend','light':'Leicht aktiv','active':'Aktiv','athlete':'Sportlich',
+        'sport':'Hauptaktivität / Sport','fitness':'Fitness / Gym','running':'Laufen','football':'Fußball',
+        'cycling':'Radfahren','swimming':'Schwimmen','other':'Andere','days':'Trainingstage / Woche',
+        'experience':'Erfahrung','beginner':'Anfänger','intermediate':'Mittelstufe','advanced':'Fortgeschritten',
+        'goal':'Hauptziel','general':'Allgemeine Fitness','strength':'Kraft','muscle':'Muskelaufbau',
+        'endurance':'Ausdauer','return':'Zurück zum Training','save':'Profil speichern','saved':'Profil gespeichert',
+        'bmi':'BMI',
+      },
+    };
+    String p(String key) => labels[lang]?[key] ?? labels['en']![key]!;
+    final ageController = TextEditingController(text: age.toString());
+    final heightController = TextEditingController(text: heightCm.round().toString());
+    final weightController = TextEditingController(text: weightKg.toStringAsFixed(1));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final bmi = weightKg / ((heightCm / 100) * (heightCm / 100));
+          return Directionality(
+            textDirection: lang == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20, 20, 20,
+                  MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(children: [
+                        const Icon(Icons.person, size: 28),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(p('title'),
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+                        IconButton(onPressed: () => Navigator.pop(sheetContext), icon: const Icon(Icons.close)),
+                      ]),
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: ageController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: p('age'), border: const OutlineInputBorder()),
+                        onChanged: (v) {
+                          final n = int.tryParse(v);
+                          if (n != null && n > 0 && n < 120) age = n;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: heightController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: p('height'), border: const OutlineInputBorder()),
+                        onChanged: (v) {
+                          final n = double.tryParse(v.replaceAll(',', '.'));
+                          if (n != null && n > 80 && n < 250) setSheetState(() => heightCm = n);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: weightController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(labelText: p('weight'), border: const OutlineInputBorder()),
+                        onChanged: (v) {
+                          final n = double.tryParse(v.replaceAll(',', '.'));
+                          if (n != null && n > 20 && n < 350) setSheetState(() => weightKg = n);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${p('bmi')}: ${bmi.toStringAsFixed(1)}',
+                        style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: sex,
+                        decoration: InputDecoration(labelText: p('sex'), border: const OutlineInputBorder()),
+                        items: ['male','female','preferNot']
+                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
+                        onChanged: (v) => setSheetState(() => sex = v ?? sex),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: activityLevel,
+                        decoration: InputDecoration(labelText: p('activity'), border: const OutlineInputBorder()),
+                        items: ['sedentary','light','active','athlete']
+                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
+                        onChanged: (v) => setSheetState(() => activityLevel = v ?? activityLevel),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: sportType,
+                        decoration: InputDecoration(labelText: p('sport'), border: const OutlineInputBorder()),
+                        items: ['fitness','running','football','cycling','swimming','other']
+                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
+                        onChanged: (v) => setSheetState(() => sportType = v ?? sportType),
+                      ),
+                      const SizedBox(height: 12),
+                      Text('${p('days')}: $trainingDays',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      Slider(
+                        value: trainingDays.toDouble(),
+                        min: 0, max: 7, divisions: 7,
+                        label: trainingDays.toString(),
+                        onChanged: (v) => setSheetState(() => trainingDays = v.round()),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: experience,
+                        decoration: InputDecoration(labelText: p('experience'), border: const OutlineInputBorder()),
+                        items: ['beginner','intermediate','advanced']
+                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
+                        onChanged: (v) => setSheetState(() => experience = v ?? experience),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        initialValue: goal,
+                        decoration: InputDecoration(labelText: p('goal'), border: const OutlineInputBorder()),
+                        items: ['general','strength','muscle','endurance','return']
+                          .map((v) => DropdownMenuItem(value: v, child: Text(p(v)))).toList(),
+                        onChanged: (v) => setSheetState(() => goal = v ?? goal),
+                      ),
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: () {
+                          final parsedAge = int.tryParse(ageController.text);
+                          final parsedHeight = double.tryParse(heightController.text.replaceAll(',', '.'));
+                          final parsedWeight = double.tryParse(weightController.text.replaceAll(',', '.'));
+                          setState(() {
+                            if (parsedAge != null && parsedAge > 0 && parsedAge < 120) age = parsedAge;
+                            if (parsedHeight != null && parsedHeight > 80 && parsedHeight < 250) heightCm = parsedHeight;
+                            if (parsedWeight != null && parsedWeight > 20 && parsedWeight < 350) weightKg = parsedWeight;
+                            profileSaved = true;
+                          });
+                          Navigator.pop(sheetContext);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(p('saved'))));
+                        },
+                        icon: const Icon(Icons.save),
+                        label: Padding(padding: const EdgeInsets.all(15), child: Text(p('save'))),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -42,6 +230,18 @@ class _ShellState extends State<Shell> {
   bool numbnessWeakness = false;
   bool feverUnwell = false;
   bool checkSaved = false;
+
+  // Profile
+  bool profileSaved = false;
+  int age = 30;
+  double heightCm = 175;
+  double weightKg = 75;
+  String sex = 'preferNot';
+  String activityLevel = 'active';
+  String sportType = 'fitness';
+  int trainingDays = 3;
+  String experience = 'intermediate';
+  String goal = 'general';
 
   final Map<String, Map<String, String>> t = {
     'en': {
