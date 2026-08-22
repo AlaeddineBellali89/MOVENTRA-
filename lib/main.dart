@@ -365,8 +365,7 @@ class _ShellState extends State<Shell> {
       infoCard(Icons.insights, tr('progTitle'), tr('progText')),
     ]);
   }
-}      body: SafeArea(child: pages[page]),
-      bottomNavigationBar: NavigationBar(
+
         selectedIndex: page,
         onDestinationSelected: (v)=>setState(()=>page=v),
         destinations: const [
