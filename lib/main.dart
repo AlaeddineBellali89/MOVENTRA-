@@ -34,6 +34,9 @@ class _ShellState extends State<Shell> {
 
   // Profile
   bool profileSaved = false;
+  String firstName = '';
+  String lastName = '';
+  bool privacyAccepted = false;
   int age = 30;
   double heightCm = 175;
   double weightKg = 75;
@@ -48,6 +51,7 @@ class _ShellState extends State<Shell> {
   String bodyArea = 'shoulder';
   String bodySide = 'right';
   bool checkSaved = false;
+  final Set<String> painfulZones = <String>{};
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -190,6 +194,22 @@ class _ShellState extends State<Shell> {
                     ]),
                     const SizedBox(height: 16),
                     TextField(
+                      decoration: InputDecoration(
+                        labelText: label('First name','الاسم','Prénom','Vorname'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => firstName = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: label('Last name','اللقب','Nom','Nachname'),
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (v) => lastName = v.trim(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
                       controller: ageC,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
@@ -285,8 +305,40 @@ class _ShellState extends State<Shell> {
                       onChanged: (v) => setSheetState(() => goal = v ?? goal),
                     ),
                     const SizedBox(height: 18),
-                    FilledButton.icon(
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: privacyAccepted,
+                      title: Text(label(
+                        'I consent to storing these profile and Body Check data on this device for MOVENTRA personalization.',
+                        'أوافق على حفظ بيانات الملف الشخصي وفحص الجسم على هذا الجهاز لتخصيص MOVENTRA.',
+                        'J’accepte le stockage de ces données de profil et de bilan sur cet appareil pour personnaliser MOVENTRA.',
+                        'Ich stimme der Speicherung dieser Profil- und Körpercheck-Daten auf diesem Gerät zur Personalisierung von MOVENTRA zu.'
+                      )),
+                      subtitle: Text(label(
+                        'You can clear your profile data from this screen.',
+                        'يمكنك حذف بيانات ملفك الشخصي من هذه الشاشة.',
+                        'Vous pouvez effacer vos données de profil depuis cet écran.',
+                        'Du kannst deine Profildaten in diesem Bereich löschen.'
+                      )),
+                      onChanged: (v) => setSheetState(() => privacyAccepted = v ?? false),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
                       onPressed: () {
+                        setState(() {
+                          firstName = '';
+                          lastName = '';
+                          profileSaved = false;
+                          privacyAccepted = false;
+                        });
+                        Navigator.pop(sheetContext);
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(label('Clear profile data','حذف بيانات الملف','Effacer les données','Profildaten löschen')),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: privacyAccepted ? () {
                         final a = int.tryParse(ageC.text);
                         final h = double.tryParse(heightC.text.replaceAll(',', '.'));
                         final w = double.tryParse(weightC.text.replaceAll(',', '.'));
@@ -297,7 +349,7 @@ class _ShellState extends State<Shell> {
                           profileSaved = true;
                         });
                         Navigator.pop(sheetContext);
-                      },
+                      } : null,
                       icon: const Icon(Icons.save),
                       label: Padding(
                         padding: const EdgeInsets.all(14),
@@ -475,7 +527,7 @@ class _ShellState extends State<Shell> {
         Icons.person,
         lang == 'ar' ? 'الملف الشخصي' : (lang == 'fr' ? 'Profil' : (lang == 'de' ? 'Profil' : 'Profile')),
         profileSaved
-            ? '$age • ${heightCm.round()} cm • ${weightKg.toStringAsFixed(1)} kg • $activityLevel'
+            ? '${[firstName, lastName].where((e) => e.isNotEmpty).join(' ')} • $age • ${heightCm.round()} cm • ${weightKg.toStringAsFixed(1)} kg • $activityLevel'
             : (lang == 'ar' ? 'اضغط لإكمال بياناتك' : 'Tap to complete your details'),
         onTap: showProfile,
       ),
@@ -503,6 +555,115 @@ class _ShellState extends State<Shell> {
     ]);
   }
 
+  Widget bodyMap() {
+    String l(String en, String ar, String fr, String de) {
+      if (lang == 'ar') return ar;
+      if (lang == 'fr') return fr;
+      if (lang == 'de') return de;
+      return en;
+    }
+
+    final zones = <Map<String, dynamic>>[
+      {'id':'neck','label':l('Neck','الرقبة','Cou','Nacken'),'top':22.0,'left':112.0,'w':56.0,'h':34.0},
+      {'id':'leftShoulder','label':l('Left shoulder','الكتف الأيسر','Épaule gauche','Linke Schulter'),'top':58.0,'left':58.0,'w':58.0,'h':42.0},
+      {'id':'rightShoulder','label':l('Right shoulder','الكتف الأيمن','Épaule droite','Rechte Schulter'),'top':58.0,'left':164.0,'w':58.0,'h':42.0},
+      {'id':'upperBack','label':l('Upper back / chest','أعلى الظهر / الصدر','Haut du dos / poitrine','Oberer Rücken / Brust'),'top':88.0,'left':103.0,'w':74.0,'h':70.0},
+      {'id':'lowerBack','label':l('Lower back','أسفل الظهر','Bas du dos','Unterer Rücken'),'top':158.0,'left':105.0,'w':70.0,'h':54.0},
+      {'id':'leftHip','label':l('Left hip','الورك الأيسر','Hanche gauche','Linke Hüfte'),'top':204.0,'left':82.0,'w':48.0,'h':52.0},
+      {'id':'rightHip','label':l('Right hip','الورك الأيمن','Hanche droite','Rechte Hüfte'),'top':204.0,'left':150.0,'w':48.0,'h':52.0},
+      {'id':'leftKnee','label':l('Left knee','الركبة اليسرى','Genou gauche','Linkes Knie'),'top':318.0,'left':89.0,'w':42.0,'h':42.0},
+      {'id':'rightKnee','label':l('Right knee','الركبة اليمنى','Genou droit','Rechtes Knie'),'top':318.0,'left':149.0,'w':42.0,'h':42.0},
+      {'id':'leftAnkle','label':l('Left ankle / foot','الكاحل / القدم اليسرى','Cheville / pied gauche','Linker Knöchel / Fuß'),'top':420.0,'left':82.0,'w':50.0,'h':42.0},
+      {'id':'rightAnkle','label':l('Right ankle / foot','الكاحل / القدم اليمنى','Cheville / pied droit','Rechter Knöchel / Fuß'),'top':420.0,'left':148.0,'w':50.0,'h':42.0},
+    ];
+
+    void toggleZone(Map<String, dynamic> z) {
+      final id = z['id'] as String;
+      setState(() {
+        painfulZones.contains(id) ? painfulZones.remove(id) : painfulZones.add(id);
+        final low = id.toLowerCase();
+        bodySide = low.startsWith('left') ? 'left' : (low.startsWith('right') ? 'right' : 'both');
+        if (low.contains('shoulder')) bodyArea = 'shoulder';
+        else if (low.contains('knee')) bodyArea = 'knee';
+        else if (low.contains('hip')) bodyArea = 'hip';
+        else if (low.contains('ankle')) bodyArea = 'ankle';
+        else if (low.contains('neck')) bodyArea = 'neck';
+        else if (low.contains('upperback')) bodyArea = 'upperBack';
+        else if (low.contains('lowerback')) bodyArea = 'lowerBack';
+      });
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(l(
+          'Selected areas turn red. Tap again to remove.',
+          'المناطق المختارة تصبح حمراء. اضغط مرة أخرى لإلغائها.',
+          'Les zones sélectionnées deviennent rouges. Touchez à nouveau pour retirer.',
+          'Ausgewählte Bereiche werden rot. Erneut tippen zum Entfernen.'
+        )),
+        const SizedBox(height: 14),
+        Center(
+          child: SizedBox(
+            width: 280,
+            height: 480,
+            child: Stack(
+              children: [
+                Positioned(left:110, top:0, child: Container(width:60,height:60,
+                  decoration: BoxDecoration(shape:BoxShape.circle,border:Border.all(color:Colors.white54,width:2)))),
+                Positioned(left:100, top:55, child: Container(width:80,height:180,
+                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(38)))),
+                Positioned(left:72, top:62, child: Container(width:28,height:190,
+                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+                Positioned(left:180, top:62, child: Container(width:28,height:190,
+                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+                Positioned(left:103, top:230, child: Container(width:32,height:225,
+                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+                Positioned(left:145, top:230, child: Container(width:32,height:225,
+                  decoration: BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+                ...zones.map((z) {
+                  final selected = painfulZones.contains(z['id']);
+                  return Positioned(
+                    top:z['top'], left:z['left'], width:z['w'], height:z['h'],
+                    child: Semantics(
+                      button:true, label:z['label'],
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => toggleZone(z),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds:180),
+                          decoration: BoxDecoration(
+                            color: selected ? Colors.red.withValues(alpha:0.72) : Colors.transparent,
+                            border: Border.all(
+                              color: selected ? Colors.redAccent : Colors.transparent,
+                              width:2,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        if (painfulZones.isNotEmpty)
+          Text(
+            '${l('Selected','المحدد','Sélection','Ausgewählt')}: ${painfulZones.length}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+      ],
+    );
+  }
+
   Widget checkPage() {
     String l(String en, String ar, String fr, String de) {
       if (lang == 'ar') return ar;
@@ -526,6 +687,8 @@ class _ShellState extends State<Shell> {
     return pageBody([
       Text(tr('body'), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
       const SizedBox(height: 20),
+      bodyMap(),
+      const SizedBox(height: 22),
       DropdownButtonFormField<String>(
         value: bodyArea,
         decoration: InputDecoration(
@@ -633,7 +796,11 @@ class _ShellState extends State<Shell> {
         infoCard(Icons.person, 'Profile', '$age • ${heightCm.round()} cm • ${weightKg.toStringAsFixed(1)} kg • $activityLevel'),
       const SizedBox(height: 12),
       if (checkSaved)
-        infoCard(Icons.monitor_heart, tr('check'), '$bodyArea/$bodySide • ${pain.round()}/10'),
+        infoCard(
+          Icons.monitor_heart,
+          tr('check'),
+          '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} selected zone(s)',
+        ),
     ]);
   }
 }
