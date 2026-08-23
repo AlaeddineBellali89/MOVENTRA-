@@ -3,27 +3,125 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 void main() => runApp(const MoventraApp());
 
-class MoventraApp extends StatelessWidget {
+class MoventraApp extends StatefulWidget {
   const MoventraApp({super.key});
+
+  @override
+  State<MoventraApp> createState() => _MoventraAppState();
+}
+
+class _MoventraAppState extends State<MoventraApp> {
+  ThemeMode themeMode = ThemeMode.system;
+
+  static const brand = Color(0xFF7C5CFC);
+  static const brand2 = Color(0xFF5B8CFF);
+
+  ThemeData _theme(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: brand,
+      brightness: brightness,
+      primary: brand,
+      secondary: brand2,
+      error: const Color(0xFFFF5C6C),
+      surface: dark ? const Color(0xFF141821) : const Color(0xFFF7F8FC),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: scheme,
+      scaffoldBackgroundColor:
+          dark ? const Color(0xFF090D15) : const Color(0xFFF3F5FA),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: dark ? const Color(0xFF151A24) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        margin: EdgeInsets.zero,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 74,
+        backgroundColor: dark ? const Color(0xFF10141D) : Colors.white,
+        indicatorColor: brand.withValues(alpha: dark ? .28 : .16),
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .4,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(54),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: dark ? const Color(0xFF111620) : Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: dark ? Colors.white10 : Colors.black12,
+          ),
+        ),
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: brand,
+        thumbColor: brand,
+        overlayColor: brand.withValues(alpha: .16),
+      ),
+    );
+  }
+
+  void cycleTheme() {
+    setState(() {
+      themeMode = switch (themeMode) {
+        ThemeMode.system => ThemeMode.dark,
+        ThemeMode.dark => ThemeMode.light,
+        ThemeMode.light => ThemeMode.system,
+      };
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'MOVENTRA',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF7C5CFC),
-        scaffoldBackgroundColor: const Color(0xFF0B0F17),
+      themeMode: themeMode,
+      theme: _theme(Brightness.light),
+      darkTheme: _theme(Brightness.dark),
+      home: Shell(
+        themeMode: themeMode,
+        onCycleTheme: cycleTheme,
       ),
-      home: const Shell(),
     );
   }
 }
 
 class Shell extends StatefulWidget {
-  const Shell({super.key});
+  const Shell({
+    super.key,
+    required this.themeMode,
+    required this.onCycleTheme,
+  });
+
+  final ThemeMode themeMode;
+  final VoidCallback onCycleTheme;
 
   @override
   State<Shell> createState() => _ShellState();
@@ -41,6 +139,7 @@ class _ShellState extends State<Shell> {
   int age = 30;
   double heightCm = 175;
   double weightKg = 75;
+  String sex = 'preferNot';
   String activityLevel = 'active';
   String sportType = 'fitness';
   int trainingDays = 3;
@@ -249,6 +348,19 @@ class _ShellState extends State<Shell> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
+                      value: sex,
+                      decoration: InputDecoration(
+                        labelText: label('Sex','الجنس','Sexe','Geschlecht'),
+                      ),
+                      items: [
+                        DropdownMenuItem(value:'female', child: Text(label('Female','أنثى','Femme','Weiblich'))),
+                        DropdownMenuItem(value:'male', child: Text(label('Male','ذكر','Homme','Männlich'))),
+                        DropdownMenuItem(value:'preferNot', child: Text(label('Prefer not to say','أفضل عدم الإجابة','Préfère ne pas répondre','Keine Angabe'))),
+                      ],
+                      onChanged: (v) => setSheetState(() => sex = v ?? sex),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
                       value: activityLevel,
                       decoration: InputDecoration(
                         labelText: label('Activity level','مستوى النشاط',"Niveau d'activité",'Aktivitätsniveau'),
@@ -441,6 +553,17 @@ class _ShellState extends State<Shell> {
               tooltip: 'Profile',
             ),
             IconButton(
+              onPressed: widget.onCycleTheme,
+              icon: Icon(
+                widget.themeMode == ThemeMode.dark
+                    ? Icons.dark_mode
+                    : widget.themeMode == ThemeMode.light
+                        ? Icons.light_mode
+                        : Icons.brightness_auto,
+              ),
+              tooltip: 'System / Dark / Light',
+            ),
+            IconButton(
               onPressed: chooseLanguage,
               icon: const Icon(Icons.language),
               tooltip: 'Language',
@@ -530,9 +653,42 @@ class _ShellState extends State<Shell> {
 
   Widget homePage() {
     return pageBody([
-      Text(
-        tr('slogan'),
-        style: const TextStyle(fontSize: 18),
+      Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF6D5DFB), Color(0xFF4776E6)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF6D5DFB).withValues(alpha: .22),
+              blurRadius: 30,
+              offset: const Offset(0, 14),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('MOVENTRA',
+              style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+            const SizedBox(height: 6),
+            Text(tr('slogan'),
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 14),
+            Row(children: [
+              const Icon(Icons.auto_awesome, color: Colors.white70, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(
+                lang == 'ar' ? 'فحص • تدريب • تعافٍ • تقدم' : 'Check • Train • Recover • Progress',
+                style: const TextStyle(color: Colors.white70),
+              )),
+            ]),
+          ],
+        ),
       ),
       const SizedBox(height: 18),
       infoCard(
@@ -591,7 +747,7 @@ class _ShellState extends State<Shell> {
         : 'No safety flag was selected here. This check does not diagnose an injury or replace medical assessment.';
   }
 
-  Widget fallbackBodyMap() {
+  Widget precisePainMap() {
     String l(String en, String ar, String fr, String de) {
       if (lang == 'ar') return ar;
       if (lang == 'fr') return fr;
@@ -765,62 +921,84 @@ class _ShellState extends State<Shell> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l('Interactive 3D body', 'جسم تفاعلي ثلاثي الأبعاد',
-                    'Corps 3D interactif', 'Interaktiver 3D-Körper'),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Theme.of(context).colorScheme.primary.withValues(alpha: .18),
+                Theme.of(context).colorScheme.secondary.withValues(alpha: .07),
+              ],
             ),
-            Switch(
-              value: useReal3D,
-              onChanged: (v) => setState(() => useReal3D = v),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: .22),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l(
-            'Drag to rotate 360° and pinch to zoom. The current CC0 model is the 3D viewing layer; pain-zone selection remains available in the precise fallback map below until the model is split into anatomical meshes.',
-            'اسحب لتدوير الجسم 360° واستعمل إصبعين للتكبير. النموذج CC0 الحالي هو طبقة العرض ثلاثية الأبعاد؛ ويبقى تحديد مناطق الألم متاحاً في الخريطة الدقيقة أدناه إلى أن نقسم النموذج إلى أجزاء تشريحية مستقلة.',
-            'Faites glisser pour tourner à 360° et pincez pour zoomer. Le modèle CC0 sert à l’affichage 3D; la sélection précise des zones reste disponible sur la carte ci-dessous jusqu’au découpage anatomique du maillage.',
-            'Zum 360°-Drehen ziehen und zum Zoomen aufziehen. Das CC0-Modell dient als 3D-Ansicht; die präzise Schmerzzonenauswahl bleibt bis zur anatomischen Mesh-Aufteilung in der Karte darunter verfügbar.',
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.view_in_ar),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l('3D Body Check','فحص الجسم 3D','Bilan corporel 3D','3D Körper-Check'),
+                    style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                Switch(
+                  value: useReal3D,
+                  onChanged: (v) => setState(() => useReal3D = v),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              Text(l(
+                'Rotate 360° and zoom. For exact pain selection, use the anatomical pain map until a segmented GLB mesh is installed.',
+                'دوّر الجسم 360° وكبّر الصورة. لتحديد الألم بدقة استخدم الخريطة التشريحية إلى أن يتم تركيب نموذج GLB مقسّم إلى أجزاء قابلة للنقر.',
+                'Tournez à 360° et zoomez. Pour une sélection précise, utilisez la carte anatomique jusqu’à l’installation d’un maillage GLB segmenté.',
+                '360° drehen und zoomen. Für eine exakte Schmerzauswahl die anatomische Karte nutzen, bis ein segmentiertes GLB installiert ist.',
+              )),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         if (useReal3D)
           SizedBox(
-            height: 460,
+            height: 470,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(26),
               child: const ModelViewer(
                 src: 'assets/models/human.glb',
-                alt: 'MOVENTRA interactive 3D human body',
+                alt: 'MOVENTRA 3D human body',
                 ar: false,
                 autoRotate: false,
-                disableZoom: false,
                 cameraControls: true,
-                backgroundColor: Color(0xFF111827),
+                disableZoom: false,
+                backgroundColor: Color(0xFF0D121C),
               ),
             ),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         OutlinedButton.icon(
           onPressed: () => setState(() => useReal3D = !useReal3D),
-          icon: Icon(useReal3D ? Icons.accessibility_new : Icons.view_in_ar),
-          label: Text(
-            useReal3D
-                ? l('Use precise pain map', 'استخدم خريطة الألم الدقيقة',
-                    'Utiliser la carte précise', 'Präzise Schmerzkarte verwenden')
-                : l('Return to 3D body', 'العودة إلى الجسم 3D',
-                    'Retour au corps 3D', 'Zurück zum 3D-Körper'),
-          ),
+          icon: Icon(useReal3D ? Icons.touch_app : Icons.view_in_ar),
+          label: Text(useReal3D
+              ? l('Select pain precisely','حدد الألم بدقة','Sélectionner précisément','Schmerz präzise auswählen')
+              : l('Return to 3D','العودة إلى 3D','Retour au 3D','Zurück zu 3D')),
         ),
         if (!useReal3D) ...[
           const SizedBox(height: 12),
-          fallbackBodyMap(),
+          precisePainMap(),
         ],
       ],
     );
@@ -991,6 +1169,55 @@ class _ShellState extends State<Shell> {
         : 'Comfortable movement, gradual loading, sleep and recovery, then reassess pain at the next check.';
   }
 
+
+  List<(String, String)> rehabExercises() {
+    if (hasSafetyFlag) return [];
+    final low = bodyArea.toLowerCase();
+
+    if (low.contains('knee')) {
+      return lang == 'ar'
+          ? [
+              ('حركة ركبة مريحة', '2–3 مجموعات بحركة ضمن مدى مريح، دون دفع الألم للارتفاع.'),
+              ('تقوية عضلات الفخذ تدريجيًا', 'ابدأ بمقاومة خفيفة وزد الحمل حسب الاستجابة.'),
+            ]
+          : [
+              ('Comfortable knee motion', '2–3 sets in a comfortable range; do not push through increasing pain.'),
+              ('Progressive thigh strengthening', 'Start light and progress resistance according to response.'),
+            ];
+    }
+    if (low.contains('shoulder')) {
+      return lang == 'ar'
+          ? [
+              ('حركة كتف مريحة', 'حركة بطيئة ضمن المدى المتحمل، 1–2 دقيقة.'),
+              ('تقوية خفيفة متدرجة', 'مقاومة خفيفة مع تحكم جيد، ثم زيادة تدريجية حسب الاستجابة.'),
+            ]
+          : [
+              ('Comfortable shoulder motion', 'Slow movement in a tolerated range for 1–2 minutes.'),
+              ('Light progressive strengthening', 'Use light resistance with control, then progress according to response.'),
+            ];
+    }
+    if (low.contains('back') || low.contains('neck')) {
+      return lang == 'ar'
+          ? [
+              ('حركة لطيفة ومتكررة', 'غيّر الوضعية وتحرك بانتظام ضمن المدى المريح.'),
+              ('عودة تدريجية للنشاط', 'زد النشاط تدريجيًا بدل الراحة الطويلة إذا لم توجد علامة أمان.'),
+            ]
+          : [
+              ('Gentle repeated movement', 'Change position and move regularly within a comfortable range.'),
+              ('Gradual return to activity', 'Build activity progressively rather than prolonged rest when no safety flag is present.'),
+            ];
+    }
+    return lang == 'ar'
+        ? [
+            ('حركة مريحة', 'حافظ على الحركة ضمن مدى متحمل وراقب الاستجابة.'),
+            ('تحميل تدريجي', 'ابدأ خفيفًا وزد الحجم أو المقاومة تدريجيًا إذا بقيت الأعراض مستقرة.'),
+          ]
+        : [
+            ('Comfortable movement', 'Keep moving in a tolerated range and monitor the response.'),
+            ('Gradual loading', 'Start light and increase volume or resistance progressively if symptoms remain stable.'),
+          ];
+  }
+
   Widget mediaPlaceholder(String title, IconData icon) {
     return Card(
       child: Padding(
@@ -1065,6 +1292,16 @@ class _ShellState extends State<Shell> {
           '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} zone(s)'),
       ],
       const SizedBox(height:18),
+      Text(
+        lang == 'ar' ? 'خطة MOVENTRA المقترحة' : 'MOVENTRA suggested plan',
+        style: const TextStyle(fontSize:20,fontWeight:FontWeight.w800),
+      ),
+      const SizedBox(height:10),
+      ...rehabExercises().map((e) => Padding(
+        padding: const EdgeInsets.only(bottom:10),
+        child: infoCard(Icons.play_circle_outline, e.$1, e.$2),
+      )),
+      const SizedBox(height:8),
       mediaPlaceholder(
         lang=='ar'?'صورة تمرين التعافي':'Recovery exercise image',
         Icons.image_outlined,
@@ -1114,6 +1351,30 @@ class _ShellState extends State<Shell> {
         Icons.task_alt,
         lang=='ar'?'إنجاز اليوم':'Today completion',
         '${trainingDone ? '✓' : '○'} Training   ${recoveryDone ? '✓' : '○'} Recovery',
+      ),
+      const SizedBox(height:12),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(lang=='ar'?'مؤشر الألم الحالي':'Current pain trend',
+                style: const TextStyle(fontSize:18,fontWeight:FontWeight.w800)),
+              const SizedBox(height:12),
+              LinearProgressIndicator(
+                minHeight: 10,
+                borderRadius: BorderRadius.circular(20),
+                value: (pain / 10).clamp(0, 1),
+                color: pain >= 7 ? const Color(0xFFFF5C6C)
+                    : pain >= 4 ? const Color(0xFFFFB547)
+                    : const Color(0xFF39D98A),
+              ),
+              const SizedBox(height:8),
+              Text('${pain.round()}/10 • ${painfulZones.length} ${lang=='ar'?'منطقة محددة':'selected zone(s)'}'),
+            ],
+          ),
+        ),
       ),
       const SizedBox(height:12),
       infoCard(
