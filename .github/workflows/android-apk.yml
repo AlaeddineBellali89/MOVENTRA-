@@ -23,7 +23,7 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android .
 
-      - name: Set Android minSdk to 24
+      - name: Configure Android for 3D and Camera
         run: |
           if [ -f android/app/build.gradle.kts ]; then
             sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/' android/app/build.gradle.kts
@@ -33,22 +33,28 @@ jobs:
             sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/' android/app/build.gradle
           fi
 
-      - name: Enable cleartext for 3D viewer
-        run: |
           python3 - <<'PY'
           from pathlib import Path
 
           p = Path("android/app/src/main/AndroidManifest.xml")
-          text = p.read_text()
+          s = p.read_text()
 
-          if 'android:usesCleartextTraffic=' not in text:
-              text = text.replace(
+          if 'android.permission.CAMERA' not in s:
+              pos = s.find('>') + 1
+              s = (
+                  s[:pos]
+                  + '\n    <uses-permission android:name="android.permission.CAMERA" />'
+                  + s[pos:]
+              )
+
+          if 'android:usesCleartextTraffic=' not in s:
+              s = s.replace(
                   '<application',
                   '<application android:usesCleartextTraffic="true"',
                   1
               )
 
-          p.write_text(text)
+          p.write_text(s)
           PY
 
       - name: Get dependencies
@@ -60,5 +66,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MOVENTRA-3D-APK
+          name: MOVENTRA-COMPLETE-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
