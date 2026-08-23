@@ -876,7 +876,6 @@ class _ShellState extends State<Shell> {
             Text('${bodyRotation.round()}°',style:const TextStyle(fontWeight:FontWeight.bold)),
             Text(l('Back','خلف','Arrière','Hinten')),
           ],
-          ),
         ),
         const SizedBox(height:14),
         Text(l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
@@ -893,7 +892,7 @@ class _ShellState extends State<Shell> {
             color:mapBackground,
             borderRadius:BorderRadius.circular(28),
             border:Border.all(color:mapBorder),
-            boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:isDark?.24:.08),blurRadius:24,offset:const Offset(0,10))],
+            boxShadow:[BoxShadow(color:Colors.black.withValues(alpha: isDark ? .24 : .08),blurRadius:24,offset:const Offset(0,10))],
           ),
           child:Center(
             child:Transform(
@@ -940,6 +939,7 @@ class _ShellState extends State<Shell> {
               ]),
             ),
           ),
+        ),
         ),
         if(painfulZones.isNotEmpty) ...[
           Text('${l('Selected','المحدد','Sélection','Ausgewählt')}: ${painfulZones.length}',
