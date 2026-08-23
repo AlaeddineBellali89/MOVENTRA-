@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'motion_coach.dart';
 
@@ -1245,6 +1246,62 @@ class _ShellState extends State<Shell> {
           ];
   }
 
+  String? exerciseAsset(String name) {
+    const assets = <String,String>{
+      'Squat':'assets/exercises/squat_3d.png',
+      'Glute Bridge':'assets/exercises/glute_bridge_3d.png',
+      'Knee Extension':'assets/exercises/knee_extension_3d.png',
+      'Calf Raise':'assets/exercises/calf_raise_3d.png',
+    };
+    return assets[name];
+  }
+
+  Future<void> openExerciseVideo(String name) async {
+    // Opens a fresh web search rather than hard-coding a fragile or unlicensed video URL.
+    // The query deliberately asks for form/tutorial content; the user still chooses the source.
+    final q = Uri.encodeComponent('$name exercise proper form tutorial');
+    final uri = Uri.parse('https://www.youtube.com/results?search_query=$q');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(lang=='ar'?'تعذر فتح دليل الفيديو. تحقق من اتصال الإنترنت.':'Could not open the video guide. Check your internet connection.'),
+      ));
+    }
+  }
+
+  Widget exerciseMedia(String name) {
+    final asset = exerciseAsset(name);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        SizedBox(height:210,child:asset!=null
+          ? Image.asset(asset,fit:BoxFit.cover,errorBuilder:(_,__,___)=>_mediaFallback(name))
+          : _mediaFallback(name)),
+        Padding(padding:const EdgeInsets.all(14),child:Row(children:[
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(lang=='ar'?'الدليل البصري':'Visual guide',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:16)),
+            const SizedBox(height:3),
+            Text(asset!=null
+              ? (lang=='ar'?'صورة توضيحية محفوظة داخل التطبيق':'Offline exercise illustration')
+              : (lang=='ar'?'دليل فيديو عبر الإنترنت متاح من الزر':'Online video guide available below')),
+          ])),
+          const SizedBox(width:10),
+          FilledButton.tonalIcon(onPressed:()=>openExerciseVideo(name),icon:const Icon(Icons.play_circle_fill_rounded),label:Text(lang=='ar'?'فيديو':'Video')),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _mediaFallback(String name) => Container(
+    decoration:const BoxDecoration(gradient:LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF151D2A),Color(0xFF0B1018)])),
+    alignment:Alignment.center,
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const Icon(Icons.fitness_center_rounded,size:58,color:Color(0xFFB8A7FF)),
+      const SizedBox(height:10),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:16),child:Text(name,textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.w900))),
+    ]),
+  );
+
   Widget mediaPlaceholder(String title, IconData icon) {
     return Card(
       child: Padding(
@@ -1405,7 +1462,7 @@ class _ShellState extends State<Shell> {
     final e=_exercise(name);
     showModalBottomSheet(
       context:context,isScrollControlled:true,showDragHandle:true,
-      builder:(sheet)=>SafeArea(child:Padding(
+      builder:(sheet)=>SafeArea(child:SingleChildScrollView(child:Padding(
         padding:const EdgeInsets.fromLTRB(20,4,20,24),
         child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Row(children:[
@@ -1416,18 +1473,20 @@ class _ShellState extends State<Shell> {
               Text('${e['group']} • ${e['sets']} sets • ${e['reps']} • ${e['rest']} rest'),
             ])),
           ]),
-          const SizedBox(height:16),
+          const SizedBox(height:14),
+          exerciseMedia(name),
+          const SizedBox(height:12),
           Text(lang=='ar'?'نفّذ التكرارات بتحكم، واترك 1–3 تكرارات احتياطية في أغلب مجموعات القوة. أوقف التمرين إذا ظهرت علامة أمان أو ألم متزايد.':'Use controlled reps and keep roughly 1–3 reps in reserve for most strength work. Stop if a safety flag or increasing pain appears.'),
           const SizedBox(height:16),
           if(_motionCoachExercises.contains(name)) FilledButton.icon(
             onPressed:hasSafetyFlag?null:(){Navigator.pop(sheet);Navigator.of(context).push(MaterialPageRoute(builder:(_)=>MotionCoachPage(exerciseName:name)));},
             icon:const Icon(Icons.camera_alt_outlined),label:Text(lang=='ar'?'فتح Motion Coach':'Open Motion Coach'),
           ) else OutlinedButton.icon(
-            onPressed:null,icon:const Icon(Icons.videocam_outlined),
-            label:Text(lang=='ar'?'تحليل الكاميرا لهذا التمرين قيد التحقق':'Camera analysis for this exercise is not yet validated'),
+            onPressed:()=>openExerciseVideo(name),icon:const Icon(Icons.play_circle_outline),
+            label:Text(lang=='ar'?'فتح دليل فيديو':'Open video guide'),
           ),
         ]),
-      )),
+      ))),
     );
   }
 
@@ -1442,7 +1501,7 @@ class _ShellState extends State<Shell> {
         itemBuilder:(context,i){final e=items[i];final coach=e['coach']==true;return Card(child:InkWell(
           borderRadius:BorderRadius.circular(24),onTap:()=>openExercise(e['name'] as String),
           child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:Theme.of(context).colorScheme.primaryContainer,borderRadius:BorderRadius.circular(14)),child:Icon(coach?Icons.camera_alt_outlined:Icons.fitness_center,size:25)),const Spacer(),const Icon(Icons.chevron_right,size:24)]),
+            Row(children:[ClipRRect(borderRadius:BorderRadius.circular(14),child:SizedBox(width:52,height:52,child:exerciseAsset(e['name'] as String)!=null?Image.asset(exerciseAsset(e['name'] as String)!,fit:BoxFit.cover,errorBuilder:(_,__,___)=>Container(color:Theme.of(context).colorScheme.primaryContainer,child:const Icon(Icons.fitness_center))):Container(color:Theme.of(context).colorScheme.primaryContainer,child:Icon(coach?Icons.camera_alt_outlined:Icons.fitness_center,size:25)))),const Spacer(),const Icon(Icons.chevron_right,size:24)]),
             const Spacer(),Text(e['name'] as String,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
             const SizedBox(height:3),Text('${e['sets']} × ${e['reps']}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
           ])),

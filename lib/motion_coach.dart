@@ -73,13 +73,38 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
     await controller.startImageStream(_process);
   }
 
+  bool get _hasFront => _cameras.any((c) => c.lensDirection == CameraLensDirection.front);
+  bool get _hasBack => _cameras.any((c) => c.lensDirection == CameraLensDirection.back);
+
   Future<void> _switchCamera() async {
     final current = _camera?.description;
-    if (current == null || _cameras.length < 2) return;
+    if (current == null) return;
     final wanted = current.lensDirection == CameraLensDirection.front
         ? CameraLensDirection.back : CameraLensDirection.front;
     final matches = _cameras.where((c) => c.lensDirection == wanted);
-    if (matches.isNotEmpty) await _openCamera(matches.first);
+    if (matches.isEmpty) {
+      if (mounted) setState(() => _feedback = wanted == CameraLensDirection.back
+          ? 'Back camera is not available on this device'
+          : 'Front camera is not available on this device');
+      return;
+    }
+    try {
+      await _openCamera(matches.first);
+    } catch (_) {
+      if (mounted) setState(() => _feedback = 'Could not switch camera. Close other camera apps and try again.');
+    }
+  }
+
+  Future<void> _selectCamera(CameraLensDirection direction) async {
+    final matches = _cameras.where((c) => c.lensDirection == direction);
+    if (matches.isEmpty) {
+      if (mounted) setState(() => _feedback = direction == CameraLensDirection.back
+          ? 'Back camera is not available on this device'
+          : 'Front camera is not available on this device');
+      return;
+    }
+    try { await _openCamera(matches.first); }
+    catch (_) { if (mounted) setState(() => _feedback = 'Could not open the selected camera'); }
   }
 
   InputImage? _input(CameraImage image) {
@@ -260,7 +285,16 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
       appBar: AppBar(
         title: const Text('MOVENTRA Motion Coach'),
         actions:[
-          IconButton(iconSize:28,tooltip:'Switch camera',onPressed:_switchCamera,icon:const Icon(Icons.cameraswitch_rounded)),
+          PopupMenuButton<CameraLensDirection>(
+            tooltip:'Choose camera',
+            icon:const Icon(Icons.photo_camera_outlined,size:28),
+            onSelected:_selectCamera,
+            itemBuilder:(_)=>[
+              PopupMenuItem(value:CameraLensDirection.front,enabled:_hasFront,child:const Row(children:[Icon(Icons.face_outlined),SizedBox(width:10),Text('Front camera')])),
+              PopupMenuItem(value:CameraLensDirection.back,enabled:_hasBack,child:const Row(children:[Icon(Icons.camera_rear_outlined),SizedBox(width:10),Text('Back camera')])),
+            ],
+          ),
+          IconButton(iconSize:30,tooltip:'Switch front / back',onPressed:(_hasFront&&_hasBack)?_switchCamera:null,icon:const Icon(Icons.cameraswitch_rounded)),
           const SizedBox(width:6),
         ],
       ),
@@ -300,6 +334,12 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
                 ]),
                 const SizedBox(height:10),
                 Text(_feedback,textAlign:TextAlign.center,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
+                const SizedBox(height:10),
+                SizedBox(width:double.infinity,child:OutlinedButton.icon(
+                  onPressed:(_hasFront&&_hasBack)?_switchCamera:null,
+                  icon:const Icon(Icons.cameraswitch_rounded,size:24),
+                  label:Text(c.description.lensDirection==CameraLensDirection.front?'Switch to back camera':'Switch to front camera'),
+                )),
                 const SizedBox(height:8),
                 const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
                   _LegendDot(Color(0xFF35D07F),'Good'),SizedBox(width:12),_LegendDot(Color(0xFFFFB020),'Adjust'),SizedBox(width:12),_LegendDot(Color(0xFFFF4D67),'Wrong'),
