@@ -23,6 +23,34 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android .
 
+      - name: Set Android minSdk to 24
+        run: |
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 24/' android/app/build.gradle.kts
+          fi
+
+          if [ -f android/app/build.gradle ]; then
+            sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/' android/app/build.gradle
+          fi
+
+      - name: Enable cleartext for 3D viewer
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          text = p.read_text()
+
+          if 'android:usesCleartextTraffic=' not in text:
+              text = text.replace(
+                  '<application',
+                  '<application android:usesCleartextTraffic="true"',
+                  1
+              )
+
+          p.write_text(text)
+          PY
+
       - name: Get dependencies
         run: flutter pub get
 
@@ -32,5 +60,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MOVENTRA-APK
+          name: MOVENTRA-3D-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
