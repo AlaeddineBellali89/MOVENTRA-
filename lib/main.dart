@@ -1263,29 +1263,36 @@ class _ShellState extends State<Shell> {
     );
   }
 
-  Widget exerciseVisualCard(String asset, String title, String subtitle) {
+  Widget exerciseVisualCard(String asset, String title, String subtitle, {VoidCallback? onTap}) {
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: Image.asset(asset, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: const Color(0xFF0B1018),
-              alignment: Alignment.center,
-              child: const Icon(Icons.fitness_center, size: 54),
+      child: InkWell(
+        onTap: onTap,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.asset(asset, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: const Color(0xFF0B1018),
+                alignment: Alignment.center,
+                child: const Icon(Icons.fitness_center, size: 58),
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(subtitle),
-          ]),
-        ),
-      ]),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(subtitle),
+              if (onTap != null) ...[
+                const SizedBox(height: 8),
+                const Row(children:[Icon(Icons.camera_alt_outlined,size:22),SizedBox(width:6),Text('Open Motion Coach',style:TextStyle(fontWeight:FontWeight.w700))]),
+              ],
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 
@@ -1327,7 +1334,12 @@ class _ShellState extends State<Shell> {
         itemCount:items.length,
         gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:.78),
-        itemBuilder:(context,i){ final e=items[i]; return exerciseVisualCard(e.$1,e.$2,e.$3); },
+        itemBuilder:(context,i){
+          final e=items[i];
+          const ids=['squat','glute_bridge','knee_extension','calf_raise'];
+          return exerciseVisualCard(e.$1,e.$2,e.$3,onTap:()=>Navigator.of(context).push(
+            MaterialPageRoute(builder:(_)=>MotionCoachPage(initialExercise:ids[i]))));
+        },
       ),
     ]);
   }
@@ -1371,7 +1383,7 @@ class _ShellState extends State<Shell> {
               const SizedBox(height:12),
               FilledButton.icon(
                 onPressed:hasSafetyFlag ? null : ()=>Navigator.of(context).push(
-                  MaterialPageRoute(builder:(_)=>const MotionCoachPage())),
+                  MaterialPageRoute(builder:(_)=>const MotionCoachPage(initialExercise:'squat'))),
                 icon:const Icon(Icons.camera_alt_outlined),
                 label:Text(lang=='ar'?'فتح الكاميرا وتحليل الحركة':'Open camera & analyze movement'),
               ),
