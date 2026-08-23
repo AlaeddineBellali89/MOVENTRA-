@@ -4,27 +4,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
-enum JointQuality { good, warning, bad }
-
-class ExerciseRule {
-  const ExerciseRule(this.id, this.name, this.primary, this.downBelow, this.upAbove);
-  final String id, name, primary;
-  final double downBelow, upAbove;
-}
-
-const exerciseRules = <ExerciseRule>[
-  ExerciseRule('squat', 'Squat', 'Knee', 105, 155),
-  ExerciseRule('glute_bridge', 'Glute Bridge', 'Hip', 145, 170),
-  ExerciseRule('knee_extension', 'Knee Extension', 'Knee', 120, 160),
-  ExerciseRule('calf_raise', 'Calf Raise', 'Ankle', 105, 125),
-  ExerciseRule('shoulder_raise', 'Shoulder Raise', 'Shoulder', 75, 145),
-  ExerciseRule('biceps_curl', 'Biceps Curl', 'Elbow', 70, 145),
-  ExerciseRule('lunge', 'Lunge', 'Knee', 105, 155),
-];
-
 class MotionCoachPage extends StatefulWidget {
-  const MotionCoachPage({super.key, this.initialExercise = 'squat'});
-  final String initialExercise;
+  const MotionCoachPage({super.key, this.exerciseName = 'Squat'});
+  final String exerciseName;
 
   @override
   State<MotionCoachPage> createState() => _MotionCoachPageState();
@@ -33,44 +15,70 @@ class MotionCoachPage extends StatefulWidget {
 class _MotionCoachPageState extends State<MotionCoachPage> {
   CameraController? _camera;
   late final PoseDetector _detector;
+  List<CameraDescription> _cameras = const [];
   Pose? _pose;
   bool _busy = false;
   int _reps = 0;
   bool _phase = false;
-  String _exercise = 'squat';
-  String _feedback = 'Move back until your full body is visible';
+  String _exercise = 'Squat';
+  String _feedback = 'Keep your full body visible';
   Map<String, double> _angles = const {};
-  Map<String, JointQuality> _quality = const {};
+  Map<String, _AngleState> _states = const {};
 
-  ExerciseRule get rule => exerciseRules.firstWhere((e) => e.id == _exercise);
+  static const _exercises = <String>[
+    'Squat', 'Glute Bridge', 'Knee Extension', 'Calf Raise',
+    'Shoulder Raise', 'Biceps Curl', 'Lunge',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _exercise = exerciseRules.any((e) => e.id == widget.initialExercise) ? widget.initialExercise : 'squat';
+    _exercise = _exercises.contains(widget.exerciseName) ? widget.exerciseName : 'Squat';
     _detector = PoseDetector(options: PoseDetectorOptions(mode: PoseDetectionMode.stream));
-    _start();
+    _start(preferFront: true);
   }
 
-  Future<void> _start() async {
+  Future<void> _start({required bool preferFront}) async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        if (mounted) setState(() => _feedback = 'No camera was found on this device');
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        if (mounted) setState(() => _feedback = 'No camera available');
         return;
       }
-      final front = cameras.where((c) => c.lensDirection == CameraLensDirection.front);
-      final selected = front.isNotEmpty ? front.first : cameras.first;
-      final controller = CameraController(selected, ResolutionPreset.medium,
-        enableAudio: false,
-        imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888);
-      await controller.initialize();
-      if (!mounted) { await controller.dispose(); return; }
-      setState(() => _camera = controller);
-      await controller.startImageStream(_process);
-    } catch (e) {
-      if (mounted) setState(() => _feedback = 'Camera unavailable. Check camera permission and try again.');
+      final wanted = preferFront ? CameraLensDirection.front : CameraLensDirection.back;
+      final matches = _cameras.where((c) => c.lensDirection == wanted);
+      final selected = matches.isNotEmpty ? matches.first : _cameras.first;
+      await _openCamera(selected);
+    } catch (_) {
+      if (mounted) setState(() => _feedback = 'Camera permission is required');
     }
+  }
+
+  Future<void> _openCamera(CameraDescription selected) async {
+    final old = _camera;
+    if (old != null) {
+      try { await old.stopImageStream(); } catch (_) {}
+      await old.dispose();
+    }
+    final controller = CameraController(
+      selected,
+      ResolutionPreset.medium,
+      enableAudio: false,
+      imageFormatGroup: Platform.isAndroid ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
+    );
+    await controller.initialize();
+    if (!mounted) { await controller.dispose(); return; }
+    setState(() { _camera = controller; _pose = null; _angles = const {}; _states = const {}; });
+    await controller.startImageStream(_process);
+  }
+
+  Future<void> _switchCamera() async {
+    final current = _camera?.description;
+    if (current == null || _cameras.length < 2) return;
+    final wanted = current.lensDirection == CameraLensDirection.front
+        ? CameraLensDirection.back : CameraLensDirection.front;
+    final matches = _cameras.where((c) => c.lensDirection == wanted);
+    if (matches.isNotEmpty) await _openCamera(matches.first);
   }
 
   InputImage? _input(CameraImage image) {
@@ -79,123 +87,232 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
     final rotation = InputImageRotationValue.fromRawValue(c.description.sensorOrientation);
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
     if (rotation == null || format == null || image.planes.length != 1) return null;
-    return InputImage.fromBytes(bytes: image.planes.first.bytes, metadata: InputImageMetadata(
-      size: Size(image.width.toDouble(), image.height.toDouble()), rotation: rotation,
-      format: format, bytesPerRow: image.planes.first.bytesPerRow));
+    return InputImage.fromBytes(
+      bytes: image.planes.first.bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: image.planes.first.bytesPerRow,
+      ),
+    );
   }
 
-  double? _angle(Pose p, PoseLandmarkType a, PoseLandmarkType b, PoseLandmarkType c) {
-    final x=p.landmarks[a], y=p.landmarks[b], z=p.landmarks[c];
-    if(x==null||y==null||z==null||x.likelihood<.5||y.likelihood<.5||z.likelihood<.5) return null;
-    final v1x=x.x-y.x,v1y=x.y-y.y,v2x=z.x-y.x,v2y=z.y-y.y;
-    final m1=math.sqrt(v1x*v1x+v1y*v1y),m2=math.sqrt(v2x*v2x+v2y*v2y);
-    if(m1==0||m2==0) return null;
+  double? _angle(Pose pose, PoseLandmarkType a, PoseLandmarkType b, PoseLandmarkType c) {
+    final p1 = pose.landmarks[a], p2 = pose.landmarks[b], p3 = pose.landmarks[c];
+    if (p1 == null || p2 == null || p3 == null || p1.likelihood < .5 || p2.likelihood < .5 || p3.likelihood < .5) return null;
+    final v1x = p1.x-p2.x, v1y = p1.y-p2.y, v2x = p3.x-p2.x, v2y = p3.y-p2.y;
+    final m1 = math.sqrt(v1x*v1x+v1y*v1y), m2 = math.sqrt(v2x*v2x+v2y*v2y);
+    if (m1 == 0 || m2 == 0) return null;
     return math.acos(((v1x*v2x+v1y*v2y)/(m1*m2)).clamp(-1.0,1.0))*180/math.pi;
   }
 
-  double? _best(double? a,double? b) => a ?? b;
-
-  Map<String,double> _measure(Pose p) {
-    final values=<String,double>{};
-    void put(String k,double? v){if(v!=null) values[k]=v;}
-    put('Knee',_best(_angle(p,PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle),_angle(p,PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle)));
-    put('Hip',_best(_angle(p,PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee),_angle(p,PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee)));
-    put('Elbow',_best(_angle(p,PoseLandmarkType.leftShoulder,PoseLandmarkType.leftElbow,PoseLandmarkType.leftWrist),_angle(p,PoseLandmarkType.rightShoulder,PoseLandmarkType.rightElbow,PoseLandmarkType.rightWrist)));
-    put('Shoulder',_best(_angle(p,PoseLandmarkType.leftElbow,PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip),_angle(p,PoseLandmarkType.rightElbow,PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip)));
-    put('Ankle',_best(_angle(p,PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle,PoseLandmarkType.leftFootIndex),_angle(p,PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle,PoseLandmarkType.rightFootIndex)));
-    return values;
+  double? _best(Pose p, List<(PoseLandmarkType,PoseLandmarkType,PoseLandmarkType)> sides) {
+    for (final s in sides) { final v = _angle(p,s.$1,s.$2,s.$3); if (v != null) return v; }
+    return null;
   }
 
-  JointQuality _grade(String name,double value) {
-    // Broad coaching bands: red means clearly outside the expected movement envelope,
-    // amber means approaching the edge, green means usable. These are coaching cues, not diagnosis.
-    switch(_exercise){
-      case 'squat':
-      case 'lunge': if(name=='Knee') return value<65||value>178?JointQuality.bad:value<80||value>170?JointQuality.warning:JointQuality.good; break;
-      case 'glute_bridge': if(name=='Hip') return value<110?JointQuality.bad:value<135?JointQuality.warning:JointQuality.good; break;
-      case 'knee_extension': if(name=='Knee') return value<80?JointQuality.bad:value<110?JointQuality.warning:JointQuality.good; break;
-      case 'calf_raise': if(name=='Ankle') return value<75||value>155?JointQuality.bad:value<90||value>145?JointQuality.warning:JointQuality.good; break;
-      case 'shoulder_raise': if(name=='Shoulder') return value<20||value>175?JointQuality.bad:value<35||value>165?JointQuality.warning:JointQuality.good; break;
-      case 'biceps_curl': if(name=='Elbow') return value<35||value>175?JointQuality.bad:value<45||value>165?JointQuality.warning:JointQuality.good; break;
+  _AngleState _range(double v, double goodMin, double goodMax, {double tolerance = 15}) {
+    if (v >= goodMin && v <= goodMax) return _AngleState.good;
+    if (v >= goodMin-tolerance && v <= goodMax+tolerance) return _AngleState.warning;
+    return _AngleState.bad;
+  }
+
+  void _analyze(Pose p) {
+    final knee = _best(p, const [
+      (PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle),
+      (PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle),
+    ]);
+    final hip = _best(p, const [
+      (PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee),
+      (PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee),
+    ]);
+    final elbow = _best(p, const [
+      (PoseLandmarkType.leftShoulder,PoseLandmarkType.leftElbow,PoseLandmarkType.leftWrist),
+      (PoseLandmarkType.rightShoulder,PoseLandmarkType.rightElbow,PoseLandmarkType.rightWrist),
+    ]);
+    final shoulder = _best(p, const [
+      (PoseLandmarkType.leftElbow,PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip),
+      (PoseLandmarkType.rightElbow,PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip),
+    ]);
+    final ankle = _best(p, const [
+      (PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle,PoseLandmarkType.leftFootIndex),
+      (PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle,PoseLandmarkType.rightFootIndex),
+    ]);
+
+    final values = <String,double>{};
+    if (knee != null) values['Knee'] = knee;
+    if (hip != null) values['Hip'] = hip;
+    if (elbow != null) values['Elbow'] = elbow;
+    if (shoulder != null) values['Shoulder'] = shoulder;
+    if (ankle != null) values['Ankle'] = ankle;
+    final states = <String,_AngleState>{};
+    String feedback = 'Good tracking — move with control';
+
+    switch (_exercise) {
+      case 'Squat':
+        if (knee != null) states['Knee'] = _range(knee, 75, 115, tolerance: 25);
+        if (hip != null) states['Hip'] = _range(hip, 55, 120, tolerance: 25);
+        if (knee != null && knee < 110) { _phase = true; feedback = 'Bottom phase — keep knees controlled'; }
+        if (knee != null && knee > 155 && _phase) { _reps++; _phase=false; feedback='Rep $_reps complete'; }
+        break;
+      case 'Glute Bridge':
+        if (hip != null) states['Hip'] = _range(hip, 155, 180, tolerance: 18);
+        if (knee != null) states['Knee'] = _range(knee, 70, 115, tolerance: 20);
+        if (hip != null && hip > 155) _phase = true;
+        if (hip != null && hip < 125 && _phase) { _reps++; _phase=false; }
+        feedback = 'Lift hips without over-arching the lower back';
+        break;
+      case 'Knee Extension':
+        if (knee != null) states['Knee'] = _range(knee, 155, 180, tolerance: 20);
+        if (knee != null && knee > 155) _phase=true;
+        if (knee != null && knee < 120 && _phase) { _reps++; _phase=false; }
+        feedback = 'Extend smoothly; avoid snapping the knee';
+        break;
+      case 'Calf Raise':
+        if (ankle != null) states['Ankle'] = _range(ankle, 115, 155, tolerance: 20);
+        feedback = 'Rise vertically and keep ankles aligned';
+        break;
+      case 'Shoulder Raise':
+        if (shoulder != null) states['Shoulder'] = _range(shoulder, 70, 105, tolerance: 20);
+        if (elbow != null) states['Elbow'] = _range(elbow, 150, 180, tolerance: 20);
+        if (shoulder != null && shoulder > 75) _phase=true;
+        if (shoulder != null && shoulder < 30 && _phase) { _reps++; _phase=false; }
+        feedback = 'Raise without shrugging; keep the elbow controlled';
+        break;
+      case 'Biceps Curl':
+        if (elbow != null) states['Elbow'] = _range(elbow, 35, 75, tolerance: 25);
+        if (elbow != null && elbow < 75) _phase=true;
+        if (elbow != null && elbow > 145 && _phase) { _reps++; _phase=false; }
+        feedback = 'Keep the upper arm stable while curling';
+        break;
+      case 'Lunge':
+        if (knee != null) states['Knee'] = _range(knee, 75, 115, tolerance: 25);
+        if (hip != null) states['Hip'] = _range(hip, 75, 135, tolerance: 25);
+        if (knee != null && knee < 115) _phase=true;
+        if (knee != null && knee > 155 && _phase) { _reps++; _phase=false; }
+        feedback = 'Keep your front knee tracking over the foot';
+        break;
     }
-    return JointQuality.good;
+    if (values.isEmpty) feedback = 'Move back until the relevant joints are visible';
+    _angles = values; _states = states; _feedback = feedback;
   }
 
   Future<void> _process(CameraImage image) async {
-    if(_busy) return;
-    final input=_input(image); if(input==null) return;
-    _busy=true;
-    try{
-      final poses=await _detector.processImage(input);
-      if(!mounted) return;
-      if(poses.isEmpty){setState((){_pose=null;_angles={};_quality={};_feedback='Move back until your full body is visible';});return;}
-      final pose=poses.first, angles=_measure(pose);
-      final quality=<String,JointQuality>{for(final e in angles.entries)e.key:_grade(e.key,e.value)};
-      final primary=angles[rule.primary];
-      var feedback='Good position — move slowly with control';
-      if(primary==null){feedback='Keep your full body visible so I can measure ${rule.primary.toLowerCase()} angle';}
-      else {
-        if(primary<rule.downBelow){_phase=true;feedback='Movement phase detected — keep control';}
-        else if(primary>rule.upAbove&&_phase){_reps++;_phase=false;feedback='Rep $_reps complete';}
-        final bad=quality.entries.where((e)=>e.value==JointQuality.bad).map((e)=>e.key).toList();
-        final warn=quality.entries.where((e)=>e.value==JointQuality.warning).map((e)=>e.key).toList();
-        if(bad.isNotEmpty) feedback='Correct ${bad.join(', ')} angle — red means outside the coaching range';
-        else if(warn.isNotEmpty) feedback='Adjust ${warn.join(', ')} slightly — amber means near the limit';
+    if (_busy) return;
+    final input = _input(image); if (input == null) return;
+    _busy = true;
+    try {
+      final poses = await _detector.processImage(input);
+      if (!mounted) return;
+      if (poses.isEmpty) {
+        setState(() { _pose=null; _angles=const {}; _states=const {}; _feedback='Move back until your full body is visible'; });
+      } else {
+        final p=poses.first; _analyze(p); setState(() => _pose=p);
       }
-      setState((){_pose=pose;_angles=angles;_quality=quality;_feedback=feedback;});
-    } finally {_busy=false;}
+    } finally { _busy=false; }
   }
 
-  void _select(String? id){
-    if(id==null||id==_exercise) return;
-    setState((){_exercise=id;_reps=0;_phase=false;_angles={};_quality={};_feedback='Ready for ${rule.name}';});
+  Color _stateColor(_AngleState? s) => switch(s) {
+    _AngleState.good => const Color(0xFF35D07F),
+    _AngleState.warning => const Color(0xFFFFB020),
+    _AngleState.bad => const Color(0xFFFF4D67),
+    null => Colors.white54,
+  };
+
+  @override
+  void dispose() {
+    final c=_camera; if(c!=null){ try { c.stopImageStream(); } catch(_){} c.dispose(); }
+    _detector.close(); super.dispose();
   }
 
-  Color _color(JointQuality? q)=>q==JointQuality.bad?Colors.redAccent:q==JointQuality.warning?Colors.amber:Colors.greenAccent;
-
   @override
-  void dispose(){_camera?.dispose();_detector.close();super.dispose();}
-
-  @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     final c=_camera;
     return Scaffold(
-      appBar:AppBar(title:const Text('MOVENTRA Motion Coach')),
-      body:SafeArea(child:Column(children:[
-        Padding(padding:const EdgeInsets.fromLTRB(16,8,16,8),child:DropdownButtonFormField<String>(
-          value:_exercise,decoration:const InputDecoration(labelText:'Exercise',border:OutlineInputBorder()),
-          items:exerciseRules.map((e)=>DropdownMenuItem(value:e.id,child:Text(e.name))).toList(),onChanged:_select)),
-        Expanded(child:c==null||!c.value.isInitialized
-          ? Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const CircularProgressIndicator(),const SizedBox(height:14),Text(_feedback,textAlign:TextAlign.center)]))
-          : Padding(padding:const EdgeInsets.symmetric(horizontal:12),child:ClipRRect(borderRadius:BorderRadius.circular(24),child:Stack(fit:StackFit.expand,children:[
-              CameraPreview(c),CustomPaint(painter:_PosePainter(_pose,c.value.previewSize,_quality)),
-              Positioned(top:12,left:12,right:12,child:Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),decoration:BoxDecoration(color:Colors.black.withValues(alpha:.58),borderRadius:BorderRadius.circular(16)),child:const Text('Green = good   •   Amber = adjust   •   Red = correct',textAlign:TextAlign.center,style:TextStyle(color:Colors.white,fontWeight:FontWeight.w700))))
-            ])))),
-        Padding(padding:const EdgeInsets.all(12),child:Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(children:[
-          Row(children:[Expanded(child:_metric('REPS','$_reps',Colors.greenAccent)),..._angles.entries.take(3).map((e)=>Expanded(child:_metric(e.key.toUpperCase(),'${e.value.round()}°',_color(_quality[e.key]))))]),
-          const SizedBox(height:12),Text(_feedback,textAlign:TextAlign.center,style:TextStyle(fontSize:17,fontWeight:FontWeight.w800,color:_quality.values.contains(JointQuality.bad)?Colors.redAccent:null)),
-          const SizedBox(height:8),const Text('Movement coaching only. Camera analysis can be imperfect and does not diagnose injury or replace professional assessment.',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
-        ]))))
-      ])));
+      appBar: AppBar(
+        title: const Text('MOVENTRA Motion Coach'),
+        actions:[
+          IconButton(iconSize:28,tooltip:'Switch camera',onPressed:_switchCamera,icon:const Icon(Icons.cameraswitch_rounded)),
+          const SizedBox(width:6),
+        ],
+      ),
+      body: c==null || !c.value.isInitialized
+        ? Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const CircularProgressIndicator(),const SizedBox(height:14),Text(_feedback)]))
+        : SafeArea(child:Column(children:[
+            Padding(
+              padding:const EdgeInsets.fromLTRB(14,4,14,10),
+              child:DropdownButtonFormField<String>(
+                value:_exercise,
+                decoration:const InputDecoration(labelText:'Exercise',prefixIcon:Icon(Icons.fitness_center)),
+                items:_exercises.map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+                onChanged:(v){ if(v!=null)setState((){_exercise=v;_reps=0;_phase=false;_angles=const{};_states=const{};}); },
+              ),
+            ),
+            Expanded(child:Padding(
+              padding:const EdgeInsets.symmetric(horizontal:12),
+              child:ClipRRect(
+                borderRadius:BorderRadius.circular(24),
+                child:Stack(fit:StackFit.expand,children:[
+                  CameraPreview(c),
+                  CustomPaint(painter:_PosePainter(_pose,c.value.previewSize,_states,c.description.lensDirection==CameraLensDirection.front)),
+                  Positioned(top:12,left:12,child:Container(
+                    padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+                    decoration:BoxDecoration(color:Colors.black54,borderRadius:BorderRadius.circular(16)),
+                    child:Text(c.description.lensDirection==CameraLensDirection.front?'FRONT CAMERA':'BACK CAMERA',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w800)),
+                  )),
+                ]),
+              ),
+            )),
+            Padding(padding:const EdgeInsets.all(14),child:Card(child:Padding(
+              padding:const EdgeInsets.all(14),
+              child:Column(children:[
+                Row(children:[
+                  Expanded(child:_metric('REPS','$_reps',Theme.of(context).colorScheme.primary)),
+                  ..._angles.entries.take(3).map((e)=>Expanded(child:_metric(e.key,'${e.value.round()}°',_stateColor(_states[e.key])))),
+                ]),
+                const SizedBox(height:10),
+                Text(_feedback,textAlign:TextAlign.center,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),
+                const SizedBox(height:8),
+                const Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                  _LegendDot(Color(0xFF35D07F),'Good'),SizedBox(width:12),_LegendDot(Color(0xFFFFB020),'Adjust'),SizedBox(width:12),_LegendDot(Color(0xFFFF4D67),'Wrong'),
+                ]),
+                const SizedBox(height:8),
+                const Text('Movement coaching only — not a medical diagnosis.',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
+              ]),
+            ))),
+          ])),
+    );
   }
 
-  Widget _metric(String label,String value,Color color)=>Column(children:[Text(label,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700)),const SizedBox(height:2),Text(value,style:TextStyle(fontSize:24,fontWeight:FontWeight.w900,color:color))]);
+  Widget _metric(String label,String value,Color color)=>Column(children:[
+    Text(label.toUpperCase(),style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)),
+    Text(value,style:TextStyle(fontSize:23,fontWeight:FontWeight.w900,color:color)),
+  ]);
 }
 
-class _PosePainter extends CustomPainter{
-  _PosePainter(this.pose,this.previewSize,this.quality);
-  final Pose? pose; final Size? previewSize; final Map<String,JointQuality> quality;
-  Color q(String joint)=>quality[joint]==JointQuality.bad?Colors.redAccent:quality[joint]==JointQuality.warning?Colors.amber:Colors.greenAccent;
+enum _AngleState { good, warning, bad }
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot(this.color,this.text); final Color color; final String text;
+  @override Widget build(BuildContext context)=>Row(children:[Container(width:9,height:9,decoration:BoxDecoration(color:color,shape:BoxShape.circle)),const SizedBox(width:4),Text(text,style:const TextStyle(fontSize:11))]);
+}
+
+class _PosePainter extends CustomPainter {
+  _PosePainter(this.pose,this.previewSize,this.states,this.mirror);
+  final Pose? pose; final Size? previewSize; final Map<String,_AngleState> states; final bool mirror;
+  Color colorFor(String joint)=>switch(states[joint]){_AngleState.good=>const Color(0xFF35D07F),_AngleState.warning=>const Color(0xFFFFB020),_AngleState.bad=>const Color(0xFFFF4D67),null=>const Color(0xFF35D07F)};
   @override void paint(Canvas canvas,Size size){
     final p=pose,ps=previewSize;if(p==null||ps==null)return;
-    Offset? pt(PoseLandmarkType t){final l=p.landmarks[t];if(l==null||l.likelihood<.45)return null;return Offset(size.width-(l.x/ps.height)*size.width,(l.y/ps.width)*size.height);}
-    void line(PoseLandmarkType a,PoseLandmarkType b,String joint){final x=pt(a),y=pt(b);if(x!=null&&y!=null)canvas.drawLine(x,y,Paint()..color=q(joint)..strokeWidth=5..strokeCap=StrokeCap.round);}
+    Offset? pt(PoseLandmarkType t){final l=p.landmarks[t];if(l==null||l.likelihood<.45)return null;final x=(l.x/ps.height)*size.width;return Offset(mirror?size.width-x:x,(l.y/ps.width)*size.height);}
+    void line(PoseLandmarkType a,PoseLandmarkType b,String joint){final x=pt(a),y=pt(b);if(x!=null&&y!=null){canvas.drawLine(x,y,Paint()..color=colorFor(joint)..strokeWidth=5..strokeCap=StrokeCap.round);}}
     line(PoseLandmarkType.leftShoulder,PoseLandmarkType.rightShoulder,'Shoulder');
-    line(PoseLandmarkType.leftShoulder,PoseLandmarkType.leftElbow,'Shoulder');line(PoseLandmarkType.leftElbow,PoseLandmarkType.leftWrist,'Elbow');
-    line(PoseLandmarkType.rightShoulder,PoseLandmarkType.rightElbow,'Shoulder');line(PoseLandmarkType.rightElbow,PoseLandmarkType.rightWrist,'Elbow');
-    line(PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip,'Hip');line(PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip,'Hip');line(PoseLandmarkType.leftHip,PoseLandmarkType.rightHip,'Hip');
-    line(PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee,'Knee');line(PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle,'Knee');line(PoseLandmarkType.leftAnkle,PoseLandmarkType.leftFootIndex,'Ankle');
-    line(PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee,'Knee');line(PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle,'Knee');line(PoseLandmarkType.rightAnkle,PoseLandmarkType.rightFootIndex,'Ankle');
+    line(PoseLandmarkType.leftShoulder,PoseLandmarkType.leftElbow,'Shoulder'); line(PoseLandmarkType.leftElbow,PoseLandmarkType.leftWrist,'Elbow');
+    line(PoseLandmarkType.rightShoulder,PoseLandmarkType.rightElbow,'Shoulder'); line(PoseLandmarkType.rightElbow,PoseLandmarkType.rightWrist,'Elbow');
+    line(PoseLandmarkType.leftShoulder,PoseLandmarkType.leftHip,'Hip'); line(PoseLandmarkType.rightShoulder,PoseLandmarkType.rightHip,'Hip');
+    line(PoseLandmarkType.leftHip,PoseLandmarkType.rightHip,'Hip');
+    line(PoseLandmarkType.leftHip,PoseLandmarkType.leftKnee,'Knee'); line(PoseLandmarkType.leftKnee,PoseLandmarkType.leftAnkle,'Knee');
+    line(PoseLandmarkType.rightHip,PoseLandmarkType.rightKnee,'Knee'); line(PoseLandmarkType.rightKnee,PoseLandmarkType.rightAnkle,'Knee');
   }
-  @override bool shouldRepaint(covariant _PosePainter old)=>old.pose!=pose||old.quality!=quality;
+  @override bool shouldRepaint(covariant _PosePainter old)=>old.pose!=pose||old.states!=states||old.mirror!=mirror;
 }

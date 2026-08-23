@@ -45,8 +45,11 @@ class _MoventraAppState extends State<MoventraApp> {
         backgroundColor: dark ? const Color(0xFF10141D) : Colors.white,
         indicatorColor: brand.withValues(alpha: dark ? .28 : .16),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
         ),
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+          size: states.contains(WidgetState.selected) ? 30 : 27,
+        )),
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -165,6 +168,7 @@ class _ShellState extends State<Shell> {
   bool redFlagBowelBladder = false;
   bool trainingDone = false;
   bool recoveryDone = false;
+  String selectedProgram = 'Upper / Lower Split';
   final List<String> checkHistory = <String>[];
 
   @override
@@ -654,7 +658,7 @@ class _ShellState extends State<Shell> {
           children: [
             CircleAvatar(
               radius: 28,
-              child: Icon(icon),
+              child: Icon(icon, size: 30),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -732,7 +736,7 @@ class _ShellState extends State<Shell> {
         onTap: showProfile,
       ),
       const SizedBox(height: 25),
-      infoCard(Icons.fitness_center, tr('plan'), tr('push'), onTap: () => setState(() => page = 2)),
+      infoCard(Icons.fitness_center, tr('plan'), selectedProgram, onTap: () => setState(() => page = 2)),
       const SizedBox(height: 12),
       infoCard(Icons.healing, tr('focus'), tr('shoulder'), onTap: () => setState(() => page = 3)),
       const SizedBox(height: 22),
@@ -1269,25 +1273,30 @@ class _ShellState extends State<Shell> {
       child: InkWell(
         onTap: onTap,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
+          SizedBox(
+            height: 150,
             child: Image.asset(asset, fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
                 color: const Color(0xFF0B1018),
                 alignment: Alignment.center,
-                child: const Icon(Icons.fitness_center, size: 58),
+                child: const Icon(Icons.fitness_center, size: 52),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(12,12,12,10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+              Text(title, maxLines:2, overflow:TextOverflow.ellipsis, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
               const SizedBox(height: 4),
-              Text(subtitle),
-              if (onTap != null) ...[
-                const SizedBox(height: 8),
-                const Row(children:[Icon(Icons.camera_alt_outlined,size:22),SizedBox(width:6),Text('Open Motion Coach',style:TextStyle(fontWeight:FontWeight.w700))]),
+              Text(subtitle, style:const TextStyle(fontWeight:FontWeight.w600)),
+              if(onTap!=null) ...[
+                const SizedBox(height:8),
+                Row(children:[
+                  const Icon(Icons.camera_alt_outlined,size:20),
+                  const SizedBox(width:6),
+                  Expanded(child:Text(lang=='ar'?'تحليل الحركة':'Motion Coach',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800))),
+                  const Icon(Icons.chevron_right,size:20),
+                ]),
               ],
             ]),
           ),
@@ -1325,22 +1334,55 @@ class _ShellState extends State<Shell> {
       ('assets/exercises/calf_raise_3d.png','Calf Raise','3 × 15'),
     ];
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Text(lang=='ar'?'مكتبة التمارين العلاجية':'Exercise library',
-        style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+      Row(children:[
+        Expanded(child:Text(lang=='ar'?'مكتبة التمارين':'Exercise library',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),
+        const Icon(Icons.auto_awesome_rounded,size:26),
+      ]),
       const SizedBox(height:10),
       GridView.builder(
         shrinkWrap:true,
         physics:const NeverScrollableScrollPhysics(),
         itemCount:items.length,
         gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:.78),
+          crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:.66),
         itemBuilder:(context,i){
           final e=items[i];
-          const ids=['squat','glute_bridge','knee_extension','calf_raise'];
           return exerciseVisualCard(e.$1,e.$2,e.$3,onTap:()=>Navigator.of(context).push(
-            MaterialPageRoute(builder:(_)=>MotionCoachPage(initialExercise:ids[i]))));
+            MaterialPageRoute(builder:(_)=>MotionCoachPage(exerciseName:e.$2))));
         },
       ),
+    ]);
+  }
+
+  List<(String,String,String,IconData)> trainingPrograms() => [
+    ('Upper / Lower Split', lang=='ar'?'4 أيام • قوة وتوازن':'4 days • balanced strength', 'Upper / Lower', Icons.swap_vert_circle_outlined),
+    ('Push / Pull / Legs', lang=='ar'?'6 أيام • حجم وقوة':'6 days • strength & hypertrophy', 'PPL', Icons.fitness_center),
+    ('Full Body', lang=='ar'?'3 أيام • كامل الجسم':'3 days • whole body', 'Full Body', Icons.accessibility_new),
+    ('Strength & Power', lang=='ar'?'4 أيام • قوة وأداء':'4 days • strength & performance', 'Strength', Icons.bolt),
+    ('Physio & Rehab', lang=='ar'?'تأهيل تدريجي حسب الأعراض':'graded rehabilitation', 'Physio', Icons.healing),
+  ];
+
+  Widget programSelector() {
+    final programs=trainingPrograms();
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Text(lang=='ar'?'البرامج التدريبية':'Training programs',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+      const SizedBox(height:10),
+      SizedBox(height:152,child:ListView.separated(
+        scrollDirection:Axis.horizontal,itemCount:programs.length,separatorBuilder:(_,__)=>const SizedBox(width:10),
+        itemBuilder:(context,i){final p=programs[i];final selected=selectedProgram==p.$1;return SizedBox(width:210,child:Card(
+          child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>setState(()=>selectedProgram=p.$1),child:Padding(
+            padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Row(children:[Icon(p.$4,size:30,color:selected?Theme.of(context).colorScheme.primary:null),const Spacer(),if(selected)const Icon(Icons.check_circle)]),
+              const Spacer(),Text(p.$1,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(p.$2,maxLines:2,overflow:TextOverflow.ellipsis),
+            ]),
+          )),
+        ));},
+      )),
+      const SizedBox(height:10),
+      infoCard(Icons.science_outlined,selectedProgram,
+        selectedProgram=='Physio & Rehab'
+          ? (lang=='ar'?'حركة مريحة • تقوية تدريجية • تعافٍ ومتابعة الأعراض':'Comfortable motion • graded strengthening • recovery and symptom monitoring')
+          : (lang=='ar'?'إحماء • تمارين مركبة • تمارين مساعدة • حركة وتعافٍ':'Warm-up • compound work • accessory work • mobility & recovery')),
     ]);
   }
 
@@ -1350,7 +1392,7 @@ class _ShellState extends State<Shell> {
       const SizedBox(height:20),
       infoCard(
         Icons.fitness_center,
-        tr('push'),
+        selectedProgram,
         checkSaved ? adaptiveTrainingText() : tr('exercise'),
       ),
       const SizedBox(height:12),
@@ -1361,6 +1403,8 @@ class _ShellState extends State<Shell> {
         infoCard(Icons.accessibility_new,tr('check'),
           '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} zone(s)'),
       ],
+      const SizedBox(height:18),
+      programSelector(),
       const SizedBox(height:18),
       Card(
         child: Padding(
@@ -1378,12 +1422,12 @@ class _ShellState extends State<Shell> {
               ]),
               const SizedBox(height:8),
               Text(lang=='ar'
-                ? 'الكاميرا تحلل وضعية الجسم، ترسم الهيكل، وتحسب زاوية الركبة وعدد تكرارات السكوات على الجهاز.'
-                : 'Use the camera for on-device pose tracking, skeleton overlay, knee-angle analysis and squat rep counting.'),
+                ? 'تحليل مباشر لمفاصل الجسم مع زوايا ملوّنة، عدّ التكرارات، واختيار عدة تمارين بالكاميرا الأمامية أو الخلفية.'
+                : 'On-device multi-joint pose tracking with color-coded angles, rep counting, multiple exercises, and front/back camera.'),
               const SizedBox(height:12),
               FilledButton.icon(
                 onPressed:hasSafetyFlag ? null : ()=>Navigator.of(context).push(
-                  MaterialPageRoute(builder:(_)=>const MotionCoachPage(initialExercise:'squat'))),
+                  MaterialPageRoute(builder:(_)=>const MotionCoachPage(exerciseName:'Squat'))),
                 icon:const Icon(Icons.camera_alt_outlined),
                 label:Text(lang=='ar'?'فتح الكاميرا وتحليل الحركة':'Open camera & analyze movement'),
               ),
