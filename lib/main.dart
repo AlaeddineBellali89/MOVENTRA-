@@ -176,6 +176,7 @@ class _ShellState extends State<Shell> {
   void initState() {
     super.initState();
     _loadHistory();
+    _loadAppState();
   }
 
   Future<void> _loadHistory() async {
@@ -186,6 +187,35 @@ class _ShellState extends State<Shell> {
         ..clear()
         ..addAll(prefs.getStringList('moventra_check_history') ?? const []);
     });
+  }
+
+
+  Future<void> _loadAppState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      trainingDone = prefs.getBool('moventra_training_done') ?? false;
+      recoveryDone = prefs.getBool('moventra_recovery_done') ?? false;
+      selectedProgram = prefs.getString('moventra_selected_program') ?? selectedProgram;
+    });
+  }
+
+  Future<void> _setTrainingDone(bool value) async {
+    setState(() => trainingDone = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('moventra_training_done', value);
+  }
+
+  Future<void> _setRecoveryDone(bool value) async {
+    setState(() => recoveryDone = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('moventra_recovery_done', value);
+  }
+
+  Future<void> _setSelectedProgram(String value) async {
+    setState(() => selectedProgram = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('moventra_selected_program', value);
   }
 
   Future<void> _saveCheckToHistory() async {
@@ -1252,6 +1282,22 @@ class _ShellState extends State<Shell> {
       'Glute Bridge':'assets/exercises/glute_bridge_3d.png',
       'Knee Extension':'assets/exercises/knee_extension_3d.png',
       'Calf Raise':'assets/exercises/calf_raise_3d.png',
+      'Romanian Deadlift':'assets/exercises/romanian_deadlift.png',
+      'Lunge':'assets/exercises/lunge.png',
+      'Push Up':'assets/exercises/push_up.png',
+      'Bench Press':'assets/exercises/bench_press.png',
+      'Overhead Press':'assets/exercises/overhead_press.png',
+      'Shoulder Raise':'assets/exercises/shoulder_raise.png',
+      'Lat Pulldown':'assets/exercises/lat_pulldown.png',
+      'Seated Row':'assets/exercises/seated_row.png',
+      'Biceps Curl':'assets/exercises/biceps_curl.png',
+      'Triceps Pressdown':'assets/exercises/triceps_pressdown.png',
+      'Hip Hinge':'assets/exercises/hip_hinge.png',
+      'Plank':'assets/exercises/plank.png',
+      'Dead Bug':'assets/exercises/dead_bug.png',
+      'Bird Dog':'assets/exercises/bird_dog.png',
+      'Heel Slide':'assets/exercises/heel_slide.png',
+      'Wall Slide':'assets/exercises/wall_slide.png',
     };
     return assets[name];
   }
@@ -1521,7 +1567,7 @@ class _ShellState extends State<Shell> {
   ];
 
   void openProgram(String program) {
-    setState(()=>selectedProgram=program);
+    _setSelectedProgram(program);
     final days=programDays(program);
     Navigator.of(context).push(MaterialPageRoute(builder:(context)=>Scaffold(
       appBar:AppBar(title:Text(program)),
@@ -1627,7 +1673,7 @@ class _ShellState extends State<Shell> {
       gluteBridgeSequence(),
       const SizedBox(height:18),
       FilledButton.icon(
-        onPressed:hasSafetyFlag ? null : ()=>setState(()=>trainingDone=!trainingDone),
+        onPressed:hasSafetyFlag ? null : ()=>_setTrainingDone(!trainingDone),
         icon:Icon(trainingDone?Icons.check_circle:Icons.circle_outlined),
         label:Padding(
           padding:const EdgeInsets.all(14),
@@ -1669,7 +1715,7 @@ class _ShellState extends State<Shell> {
       gluteBridgeSequence(),
       const SizedBox(height:18),
       FilledButton.icon(
-        onPressed:hasSafetyFlag ? null : ()=>setState(()=>recoveryDone=!recoveryDone),
+        onPressed:hasSafetyFlag ? null : ()=>_setRecoveryDone(!recoveryDone),
         icon:Icon(recoveryDone?Icons.check_circle:Icons.circle_outlined),
         label:Padding(
           padding:const EdgeInsets.all(14),
