@@ -27,7 +27,8 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
 
   static const _exercises = <String>[
     'Squat', 'Glute Bridge', 'Knee Extension', 'Calf Raise',
-    'Shoulder Raise', 'Biceps Curl', 'Lunge',
+    'Shoulder Raise', 'Biceps Curl', 'Lunge', 'Push Up',
+    'Overhead Press', 'Hip Hinge', 'Plank',
   ];
 
   @override
@@ -193,6 +194,32 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
         if (knee != null && knee > 155 && _phase) { _reps++; _phase=false; }
         feedback = 'Keep your front knee tracking over the foot';
         break;
+      case 'Push Up':
+        if (elbow != null) states['Elbow'] = _range(elbow, 70, 105, tolerance: 25);
+        if (hip != null) states['Hip'] = _range(hip, 155, 180, tolerance: 15);
+        if (elbow != null && elbow < 105) _phase=true;
+        if (elbow != null && elbow > 155 && _phase) { _reps++; _phase=false; }
+        feedback = 'Keep a straight trunk and lower with elbow control';
+        break;
+      case 'Overhead Press':
+        if (shoulder != null) states['Shoulder'] = _range(shoulder, 145, 180, tolerance: 25);
+        if (elbow != null) states['Elbow'] = _range(elbow, 155, 180, tolerance: 20);
+        if (elbow != null && elbow > 155) _phase=true;
+        if (elbow != null && elbow < 100 && _phase) { _reps++; _phase=false; }
+        feedback = 'Press overhead without excessive trunk lean';
+        break;
+      case 'Hip Hinge':
+        if (hip != null) states['Hip'] = _range(hip, 70, 120, tolerance: 25);
+        if (knee != null) states['Knee'] = _range(knee, 135, 175, tolerance: 20);
+        if (hip != null && hip < 120) _phase=true;
+        if (hip != null && hip > 155 && _phase) { _reps++; _phase=false; }
+        feedback = 'Hinge from the hips and keep the knees softly bent';
+        break;
+      case 'Plank':
+        if (hip != null) states['Hip'] = _range(hip, 160, 180, tolerance: 15);
+        if (shoulder != null) states['Shoulder'] = _range(shoulder, 70, 110, tolerance: 20);
+        feedback = 'Keep shoulders, hips and ankles in a controlled line';
+        break;
     }
     if (values.isEmpty) feedback = 'Move back until the relevant joints are visible';
     _angles = values; _states = states; _feedback = feedback;
@@ -267,9 +294,9 @@ class _MotionCoachPageState extends State<MotionCoachPage> {
             Padding(padding:const EdgeInsets.all(14),child:Card(child:Padding(
               padding:const EdgeInsets.all(14),
               child:Column(children:[
-                Row(children:[
-                  Expanded(child:_metric('REPS','$_reps',Theme.of(context).colorScheme.primary)),
-                  ..._angles.entries.take(3).map((e)=>Expanded(child:_metric(e.key,'${e.value.round()}°',_stateColor(_states[e.key])))),
+                Wrap(alignment:WrapAlignment.center,spacing:18,runSpacing:8,children:[
+                  SizedBox(width:70,child:_metric('REPS','$_reps',Theme.of(context).colorScheme.primary)),
+                  ..._angles.entries.map((e)=>SizedBox(width:70,child:_metric(e.key,'${e.value.round()}°',_stateColor(_states[e.key])))),
                 ]),
                 const SizedBox(height:10),
                 Text(_feedback,textAlign:TextAlign.center,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800)),

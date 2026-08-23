@@ -1326,54 +1326,181 @@ class _ShellState extends State<Shell> {
     );
   }
 
+  static const Set<String> _motionCoachExercises = {
+    'Squat','Glute Bridge','Knee Extension','Calf Raise','Shoulder Raise',
+    'Biceps Curl','Lunge','Push Up','Overhead Press','Hip Hinge','Plank',
+  };
+
+  List<Map<String, Object>> exerciseCatalog() => [
+    {'name':'Squat','group':'Legs','sets':'3','reps':'8–12','rest':'90 s','coach':true},
+    {'name':'Romanian Deadlift','group':'Posterior chain','sets':'3','reps':'8–10','rest':'120 s','coach':false},
+    {'name':'Lunge','group':'Legs','sets':'3','reps':'8–12 / side','rest':'75 s','coach':true},
+    {'name':'Glute Bridge','group':'Glutes','sets':'3','reps':'12–15','rest':'60 s','coach':true},
+    {'name':'Calf Raise','group':'Calves','sets':'3','reps':'12–20','rest':'60 s','coach':true},
+    {'name':'Knee Extension','group':'Quads / Rehab','sets':'3','reps':'10–15','rest':'60 s','coach':true},
+    {'name':'Push Up','group':'Chest / Triceps','sets':'3','reps':'6–15','rest':'90 s','coach':true},
+    {'name':'Bench Press','group':'Chest','sets':'3','reps':'6–10','rest':'120 s','coach':false},
+    {'name':'Overhead Press','group':'Shoulders','sets':'3','reps':'6–10','rest':'120 s','coach':true},
+    {'name':'Shoulder Raise','group':'Shoulders','sets':'3','reps':'10–15','rest':'60 s','coach':true},
+    {'name':'Lat Pulldown','group':'Back','sets':'3','reps':'8–12','rest':'90 s','coach':false},
+    {'name':'Seated Row','group':'Back','sets':'3','reps':'8–12','rest':'90 s','coach':false},
+    {'name':'Biceps Curl','group':'Biceps','sets':'3','reps':'10–15','rest':'60 s','coach':true},
+    {'name':'Triceps Pressdown','group':'Triceps','sets':'3','reps':'10–15','rest':'60 s','coach':false},
+    {'name':'Hip Hinge','group':'Movement skill','sets':'3','reps':'8–12','rest':'60 s','coach':true},
+    {'name':'Plank','group':'Core','sets':'3','reps':'20–45 s','rest':'60 s','coach':true},
+    {'name':'Dead Bug','group':'Core / Rehab','sets':'3','reps':'6–10 / side','rest':'45 s','coach':false},
+    {'name':'Bird Dog','group':'Core / Rehab','sets':'3','reps':'6–10 / side','rest':'45 s','coach':false},
+    {'name':'Heel Slide','group':'Knee / Rehab','sets':'2','reps':'10–15','rest':'30 s','coach':false},
+    {'name':'Wall Slide','group':'Shoulder / Rehab','sets':'2','reps':'8–12','rest':'30 s','coach':false},
+  ];
+
+  Map<String, List<List<String>>> programDays(String program) {
+    switch (program) {
+      case 'Upper / Lower Split': return {
+        'Upper A':['Bench Press','Seated Row','Overhead Press','Lat Pulldown','Biceps Curl','Triceps Pressdown'],
+        'Lower A':['Squat','Romanian Deadlift','Lunge','Calf Raise','Plank'],
+        'Upper B':['Push Up','Lat Pulldown','Shoulder Raise','Seated Row','Biceps Curl','Triceps Pressdown'],
+        'Lower B':['Glute Bridge','Squat','Hip Hinge','Lunge','Calf Raise','Dead Bug'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      case 'Push / Pull / Legs': return {
+        'Push':['Bench Press','Overhead Press','Push Up','Shoulder Raise','Triceps Pressdown'],
+        'Pull':['Lat Pulldown','Seated Row','Hip Hinge','Biceps Curl','Bird Dog'],
+        'Legs':['Squat','Romanian Deadlift','Lunge','Glute Bridge','Calf Raise','Plank'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      case 'Full Body': return {
+        'Full Body A':['Squat','Bench Press','Seated Row','Glute Bridge','Plank'],
+        'Full Body B':['Lunge','Overhead Press','Lat Pulldown','Hip Hinge','Dead Bug'],
+        'Full Body C':['Squat','Push Up','Seated Row','Calf Raise','Bird Dog'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      case 'Strength & Power': return {
+        'Strength A':['Squat','Bench Press','Seated Row','Plank'],
+        'Strength B':['Romanian Deadlift','Overhead Press','Lat Pulldown','Glute Bridge'],
+        'Strength C':['Squat','Push Up','Seated Row','Lunge'],
+        'Strength D':['Hip Hinge','Overhead Press','Lat Pulldown','Calf Raise'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      case 'Beginner Foundation': return {
+        'Day A':['Squat','Push Up','Seated Row','Glute Bridge','Plank'],
+        'Day B':['Lunge','Lat Pulldown','Shoulder Raise','Hip Hinge','Dead Bug'],
+        'Day C':['Squat','Push Up','Seated Row','Calf Raise','Bird Dog'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      case 'Mobility & Recovery': return {
+        'Mobility A':['Heel Slide','Wall Slide','Glute Bridge','Bird Dog'],
+        'Mobility B':['Knee Extension','Shoulder Raise','Dead Bug','Calf Raise'],
+        'Mobility C':['Hip Hinge','Wall Slide','Glute Bridge','Plank'],
+      }.map((k,v)=>MapEntry(k,[v]));
+      default: return {
+        'Rehab A':['Heel Slide','Glute Bridge','Knee Extension','Calf Raise'],
+        'Rehab B':['Wall Slide','Shoulder Raise','Bird Dog','Dead Bug'],
+        'Rehab C':['Glute Bridge','Hip Hinge','Plank','Calf Raise'],
+      }.map((k,v)=>MapEntry(k,[v]));
+    }
+  }
+
+  Map<String,Object> _exercise(String name) => exerciseCatalog().firstWhere(
+    (e)=>e['name']==name,
+    orElse:()=>{'name':name,'group':'General','sets':'3','reps':'8–12','rest':'60–90 s','coach':false},
+  );
+
+  void openExercise(String name) {
+    final e=_exercise(name);
+    showModalBottomSheet(
+      context:context,isScrollControlled:true,showDragHandle:true,
+      builder:(sheet)=>SafeArea(child:Padding(
+        padding:const EdgeInsets.fromLTRB(20,4,20,24),
+        child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Row(children:[
+            Container(width:52,height:52,decoration:BoxDecoration(color:Theme.of(context).colorScheme.primaryContainer,borderRadius:BorderRadius.circular(16)),child:const Icon(Icons.fitness_center,size:28)),
+            const SizedBox(width:12),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(name,style:const TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+              Text('${e['group']} • ${e['sets']} sets • ${e['reps']} • ${e['rest']} rest'),
+            ])),
+          ]),
+          const SizedBox(height:16),
+          Text(lang=='ar'?'نفّذ التكرارات بتحكم، واترك 1–3 تكرارات احتياطية في أغلب مجموعات القوة. أوقف التمرين إذا ظهرت علامة أمان أو ألم متزايد.':'Use controlled reps and keep roughly 1–3 reps in reserve for most strength work. Stop if a safety flag or increasing pain appears.'),
+          const SizedBox(height:16),
+          if(_motionCoachExercises.contains(name)) FilledButton.icon(
+            onPressed:hasSafetyFlag?null:(){Navigator.pop(sheet);Navigator.of(context).push(MaterialPageRoute(builder:(_)=>MotionCoachPage(exerciseName:name)));},
+            icon:const Icon(Icons.camera_alt_outlined),label:Text(lang=='ar'?'فتح Motion Coach':'Open Motion Coach'),
+          ) else OutlinedButton.icon(
+            onPressed:null,icon:const Icon(Icons.videocam_outlined),
+            label:Text(lang=='ar'?'تحليل الكاميرا لهذا التمرين قيد التحقق':'Camera analysis for this exercise is not yet validated'),
+          ),
+        ]),
+      )),
+    );
+  }
+
   Widget exerciseLibraryPreview() {
-    final items = [
-      ('assets/exercises/squat_3d.png','Squat','3 × 12'),
-      ('assets/exercises/glute_bridge_3d.png','Glute Bridge','3 × 15'),
-      ('assets/exercises/knee_extension_3d.png','Knee Extension','3 × 12'),
-      ('assets/exercises/calf_raise_3d.png','Calf Raise','3 × 15'),
-    ];
+    final items=exerciseCatalog();
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Row(children:[
-        Expanded(child:Text(lang=='ar'?'مكتبة التمارين':'Exercise library',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),
-        const Icon(Icons.auto_awesome_rounded,size:26),
-      ]),
+      Row(children:[Expanded(child:Text(lang=='ar'?'مكتبة التمارين':'Exercise library',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),const Icon(Icons.auto_awesome_rounded,size:28)]),
       const SizedBox(height:10),
       GridView.builder(
-        shrinkWrap:true,
-        physics:const NeverScrollableScrollPhysics(),
-        itemCount:items.length,
-        gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:.66),
-        itemBuilder:(context,i){
-          final e=items[i];
-          return exerciseVisualCard(e.$1,e.$2,e.$3,onTap:()=>Navigator.of(context).push(
-            MaterialPageRoute(builder:(_)=>MotionCoachPage(exerciseName:e.$2))));
-        },
+        shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),itemCount:items.length,
+        gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:1.05),
+        itemBuilder:(context,i){final e=items[i];final coach=e['coach']==true;return Card(child:InkWell(
+          borderRadius:BorderRadius.circular(24),onTap:()=>openExercise(e['name'] as String),
+          child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:Theme.of(context).colorScheme.primaryContainer,borderRadius:BorderRadius.circular(14)),child:Icon(coach?Icons.camera_alt_outlined:Icons.fitness_center,size:25)),const Spacer(),const Icon(Icons.chevron_right,size:24)]),
+            const Spacer(),Text(e['name'] as String,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+            const SizedBox(height:3),Text('${e['sets']} × ${e['reps']}',maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700)),
+          ])),
+        ));},
       ),
     ]);
   }
 
   List<(String,String,String,IconData)> trainingPrograms() => [
     ('Upper / Lower Split', lang=='ar'?'4 أيام • قوة وتوازن':'4 days • balanced strength', 'Upper / Lower', Icons.swap_vert_circle_outlined),
-    ('Push / Pull / Legs', lang=='ar'?'6 أيام • حجم وقوة':'6 days • strength & hypertrophy', 'PPL', Icons.fitness_center),
+    ('Push / Pull / Legs', lang=='ar'?'3–6 أيام • حجم وقوة':'3–6 days • strength & hypertrophy', 'PPL', Icons.fitness_center),
     ('Full Body', lang=='ar'?'3 أيام • كامل الجسم':'3 days • whole body', 'Full Body', Icons.accessibility_new),
     ('Strength & Power', lang=='ar'?'4 أيام • قوة وأداء':'4 days • strength & performance', 'Strength', Icons.bolt),
+    ('Beginner Foundation', lang=='ar'?'3 أيام • تأسيس تدريجي':'3 days • progressive foundation', 'Beginner', Icons.school_outlined),
+    ('Mobility & Recovery', lang=='ar'?'3 أيام • حركة وتعافٍ':'3 days • mobility & recovery', 'Mobility', Icons.self_improvement),
     ('Physio & Rehab', lang=='ar'?'تأهيل تدريجي حسب الأعراض':'graded rehabilitation', 'Physio', Icons.healing),
   ];
+
+  void openProgram(String program) {
+    setState(()=>selectedProgram=program);
+    final days=programDays(program);
+    Navigator.of(context).push(MaterialPageRoute(builder:(context)=>Scaffold(
+      appBar:AppBar(title:Text(program)),
+      body:SafeArea(child:ListView(padding:const EdgeInsets.all(16),children:[
+        Text(lang=='ar'?'خطة تدريب عملية':'Practical training plan',style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900)),
+        const SizedBox(height:6),
+        Text(lang=='ar'?'ابدأ بالحجم المناسب لمستواك، زد الحمل تدريجيًا عندما تكتمل التكرارات بجودة جيدة، وخذ يوم راحة عند الحاجة.':'Start with a volume you can recover from, progress load when reps are completed with good quality, and use rest days as needed.'),
+        const SizedBox(height:16),
+        ...days.entries.map((d){final names=d.value.expand((x)=>x).toList();return Padding(padding:const EdgeInsets.only(bottom:12),child:Card(child:Padding(
+          padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Row(children:[const Icon(Icons.calendar_today_outlined,size:26),const SizedBox(width:10),Expanded(child:Text(d.key,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900))),Text('${names.length} ${lang=='ar'?'تمارين':'ex.'}',style:const TextStyle(fontWeight:FontWeight.w700))]),
+            const SizedBox(height:10),
+            ...names.asMap().entries.map((x){final e=_exercise(x.value);return ListTile(
+              contentPadding:EdgeInsets.zero,minVerticalPadding:8,
+              leading:CircleAvatar(child:Text('${x.key+1}')),
+              title:Text(x.value,style:const TextStyle(fontWeight:FontWeight.w800)),
+              subtitle:Text('${e['sets']} sets • ${e['reps']} • ${e['rest']} rest'),
+              trailing:Icon(_motionCoachExercises.contains(x.value)?Icons.camera_alt_outlined:Icons.chevron_right),
+              onTap:()=>openExercise(x.value),
+            );}),
+          ]),
+        )));}),
+      ])),
+    )));
+  }
 
   Widget programSelector() {
     final programs=trainingPrograms();
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Text(lang=='ar'?'البرامج التدريبية':'Training programs',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+      Row(children:[Expanded(child:Text(lang=='ar'?'البرامج التدريبية':'Training programs',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),Text(lang=='ar'?'اضغط للفتح':'Tap to open',style:TextStyle(color:Theme.of(context).colorScheme.primary,fontWeight:FontWeight.w800))]),
       const SizedBox(height:10),
-      SizedBox(height:152,child:ListView.separated(
+      SizedBox(height:166,child:ListView.separated(
         scrollDirection:Axis.horizontal,itemCount:programs.length,separatorBuilder:(_,__)=>const SizedBox(width:10),
-        itemBuilder:(context,i){final p=programs[i];final selected=selectedProgram==p.$1;return SizedBox(width:210,child:Card(
-          child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>setState(()=>selectedProgram=p.$1),child:Padding(
+        itemBuilder:(context,i){final p=programs[i];final selected=selectedProgram==p.$1;return SizedBox(width:218,child:Card(
+          child:InkWell(borderRadius:BorderRadius.circular(24),onTap:()=>openProgram(p.$1),child:Padding(
             padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Row(children:[Icon(p.$4,size:30,color:selected?Theme.of(context).colorScheme.primary:null),const Spacer(),if(selected)const Icon(Icons.check_circle)]),
-              const Spacer(),Text(p.$1,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(p.$2,maxLines:2,overflow:TextOverflow.ellipsis),
+              Row(children:[Icon(p.$4,size:32,color:selected?Theme.of(context).colorScheme.primary:null),const Spacer(),Icon(selected?Icons.check_circle:Icons.arrow_forward_rounded,size:25)]),
+              const Spacer(),Text(p.$1,maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(p.$2,maxLines:2,overflow:TextOverflow.ellipsis),
             ]),
           )),
         ));},
@@ -1382,7 +1509,7 @@ class _ShellState extends State<Shell> {
       infoCard(Icons.science_outlined,selectedProgram,
         selectedProgram=='Physio & Rehab'
           ? (lang=='ar'?'حركة مريحة • تقوية تدريجية • تعافٍ ومتابعة الأعراض':'Comfortable motion • graded strengthening • recovery and symptom monitoring')
-          : (lang=='ar'?'إحماء • تمارين مركبة • تمارين مساعدة • حركة وتعافٍ':'Warm-up • compound work • accessory work • mobility & recovery')),
+          : (lang=='ar'?'اضغط على البرنامج لفتح الأيام والتمارين والتفاصيل':'Tap the program to open days, exercises, sets, reps and rest')),
     ]);
   }
 
