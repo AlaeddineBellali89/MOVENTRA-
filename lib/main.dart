@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 void main() => runApp(const MoventraApp());
 
@@ -54,6 +55,7 @@ class _ShellState extends State<Shell> {
   final Set<String> painfulZones = <String>{};
   bool bodyBackView = false;
   double bodyRotation = 0.0;
+  bool useReal3D = true;
   String symptomDuration = 'recent';
   String symptomPattern = 'movement';
   bool redFlagTrauma = false;
@@ -589,7 +591,7 @@ class _ShellState extends State<Shell> {
         : 'No safety flag was selected here. This check does not diagnose an injury or replace medical assessment.';
   }
 
-  Widget bodyMap() {
+  Widget fallbackBodyMap() {
     String l(String en, String ar, String fr, String de) {
       if (lang == 'ar') return ar;
       if (lang == 'fr') return fr;
@@ -751,6 +753,79 @@ class _ShellState extends State<Shell> {
     );
   }
 
+
+  Widget body3DViewer() {
+    String l(String en, String ar, String fr, String de) {
+      if (lang == 'ar') return ar;
+      if (lang == 'fr') return fr;
+      if (lang == 'de') return de;
+      return en;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l('Interactive 3D body', 'جسم تفاعلي ثلاثي الأبعاد',
+                    'Corps 3D interactif', 'Interaktiver 3D-Körper'),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Switch(
+              value: useReal3D,
+              onChanged: (v) => setState(() => useReal3D = v),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l(
+            'Drag to rotate 360° and pinch to zoom. The current CC0 model is the 3D viewing layer; pain-zone selection remains available in the precise fallback map below until the model is split into anatomical meshes.',
+            'اسحب لتدوير الجسم 360° واستعمل إصبعين للتكبير. النموذج CC0 الحالي هو طبقة العرض ثلاثية الأبعاد؛ ويبقى تحديد مناطق الألم متاحاً في الخريطة الدقيقة أدناه إلى أن نقسم النموذج إلى أجزاء تشريحية مستقلة.',
+            'Faites glisser pour tourner à 360° et pincez pour zoomer. Le modèle CC0 sert à l’affichage 3D; la sélection précise des zones reste disponible sur la carte ci-dessous jusqu’au découpage anatomique du maillage.',
+            'Zum 360°-Drehen ziehen und zum Zoomen aufziehen. Das CC0-Modell dient als 3D-Ansicht; die präzise Schmerzzonenauswahl bleibt bis zur anatomischen Mesh-Aufteilung in der Karte darunter verfügbar.',
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (useReal3D)
+          SizedBox(
+            height: 460,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: const ModelViewer(
+                src: 'assets/models/human.glb',
+                alt: 'MOVENTRA interactive 3D human body',
+                ar: false,
+                autoRotate: false,
+                disableZoom: false,
+                cameraControls: true,
+                backgroundColor: Color(0xFF111827),
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => setState(() => useReal3D = !useReal3D),
+          icon: Icon(useReal3D ? Icons.accessibility_new : Icons.view_in_ar),
+          label: Text(
+            useReal3D
+                ? l('Use precise pain map', 'استخدم خريطة الألم الدقيقة',
+                    'Utiliser la carte précise', 'Präzise Schmerzkarte verwenden')
+                : l('Return to 3D body', 'العودة إلى الجسم 3D',
+                    'Retour au corps 3D', 'Zurück zum 3D-Körper'),
+          ),
+        ),
+        if (!useReal3D) ...[
+          const SizedBox(height: 12),
+          fallbackBodyMap(),
+        ],
+      ],
+    );
+  }
+
   Widget checkPage() {
     String l(String en, String ar, String fr, String de) {
       if (lang == 'ar') return ar;
@@ -774,7 +849,7 @@ class _ShellState extends State<Shell> {
     return pageBody([
       Text(tr('body'), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
       const SizedBox(height: 20),
-      bodyMap(),
+      body3DViewer(),
       const SizedBox(height: 22),
       DropdownButtonFormField<String>(
         value: bodyArea,
