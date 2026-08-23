@@ -1,7 +1,7 @@
 name: moventra
 description: MOVENTRA - Train. Recover. Return Stronger.
 publish_to: 'none'
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -25,3 +25,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/human.glb
+    - assets/exercises/
+    - assets/design/
