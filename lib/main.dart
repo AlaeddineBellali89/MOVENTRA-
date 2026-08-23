@@ -15,8 +15,8 @@ class MoventraApp extends StatefulWidget {
 class _MoventraAppState extends State<MoventraApp> {
   ThemeMode themeMode = ThemeMode.system;
 
-  static const brand = Color(0xFF7C5CFC);
-  static const brand2 = Color(0xFF5B8CFF);
+  static const brand = Color(0xFF8B5CF6);
+  static const brand2 = Color(0xFF38BDF8);
 
   ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
@@ -25,18 +25,18 @@ class _MoventraAppState extends State<MoventraApp> {
       brightness: brightness,
       primary: brand,
       secondary: brand2,
-      error: const Color(0xFFFF5C6C),
-      surface: dark ? const Color(0xFF141821) : const Color(0xFFF7F8FC),
+      error: const Color(0xFFFF4D67),
+      surface: dark ? const Color(0xFF121722) : const Color(0xFFF8FAFD),
     );
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor:
-          dark ? const Color(0xFF090D15) : const Color(0xFFF3F5FA),
+          dark ? const Color(0xFF070B12) : const Color(0xFFF1F5F9),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: dark ? const Color(0xFF151A24) : Colors.white,
+        color: dark ? const Color(0xFF111722) : const Color(0xFFFFFFFF),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         margin: EdgeInsets.zero,
       ),
@@ -820,6 +820,10 @@ class _ShellState extends State<Shell> {
     ];
 
     final zones = bodyBackView ? backZones : frontZones;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final silhouetteColor = isDark ? const Color(0xFF9CA8BA) : const Color(0xFF475569);
+    final mapBackground = isDark ? const Color(0xFF0B111B) : const Color(0xFFE8EEF7);
+    final mapBorder = isDark ? const Color(0xFF253044) : const Color(0xFFCBD5E1);
 
     void toggleZone(Map<String, dynamic> z) {
       final id = z['id'] as String;
@@ -872,6 +876,7 @@ class _ShellState extends State<Shell> {
             Text('${bodyRotation.round()}°',style:const TextStyle(fontWeight:FontWeight.bold)),
             Text(l('Back','خلف','Arrière','Hinten')),
           ],
+          ),
         ),
         const SizedBox(height:14),
         Text(l('Tap every painful area','اضغط على كل منطقة تؤلمك','Touchez chaque zone douloureuse','Tippe auf jede schmerzende Stelle'),
@@ -882,8 +887,16 @@ class _ShellState extends State<Shell> {
           'Les zones sélectionnées deviennent rouges. Touchez à nouveau pour retirer.',
           'Ausgewählte Bereiche werden rot. Erneut tippen zum Entfernen.')),
         const SizedBox(height:14),
-        Center(
-          child:Transform(
+        Container(
+          padding:const EdgeInsets.symmetric(vertical:18),
+          decoration:BoxDecoration(
+            color:mapBackground,
+            borderRadius:BorderRadius.circular(28),
+            border:Border.all(color:mapBorder),
+            boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:isDark?.24:.08),blurRadius:24,offset:const Offset(0,10))],
+          ),
+          child:Center(
+            child:Transform(
             alignment:Alignment.center,
             transform:Matrix4.identity()
               ..setEntry(3,2,0.0012)
@@ -892,17 +905,17 @@ class _ShellState extends State<Shell> {
               width:280,height:480,
               child:Stack(children:[
               Positioned(left:110,top:0,child:Container(width:60,height:60,
-                decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:Colors.white54,width:2)))),
+                decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:silhouetteColor,width:2)))),
               Positioned(left:100,top:55,child:Container(width:80,height:180,
-                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(38)))),
+                decoration:BoxDecoration(border:Border.all(color:silhouetteColor,width:2),borderRadius:BorderRadius.circular(38)))),
               Positioned(left:72,top:62,child:Container(width:28,height:190,
-                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+                decoration:BoxDecoration(border:Border.all(color:silhouetteColor,width:2),borderRadius:BorderRadius.circular(16)))),
               Positioned(left:180,top:62,child:Container(width:28,height:190,
-                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(16)))),
+                decoration:BoxDecoration(border:Border.all(color:silhouetteColor,width:2),borderRadius:BorderRadius.circular(16)))),
               Positioned(left:103,top:230,child:Container(width:32,height:225,
-                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+                decoration:BoxDecoration(border:Border.all(color:silhouetteColor,width:2),borderRadius:BorderRadius.circular(18)))),
               Positioned(left:145,top:230,child:Container(width:32,height:225,
-                decoration:BoxDecoration(border:Border.all(color:Colors.white54,width:2),borderRadius:BorderRadius.circular(18)))),
+                decoration:BoxDecoration(border:Border.all(color:silhouetteColor,width:2),borderRadius:BorderRadius.circular(18)))),
               ...zones.map((z){
                 final selected=painfulZones.contains(z['id']);
                 return Positioned(
@@ -915,8 +928,8 @@ class _ShellState extends State<Shell> {
                       child:AnimatedContainer(
                         duration:const Duration(milliseconds:180),
                         decoration:BoxDecoration(
-                          color:selected?Colors.red.withValues(alpha:0.72):Colors.transparent,
-                          border:Border.all(color:selected?Colors.redAccent:Colors.transparent,width:2),
+                          color:selected?const Color(0xFFFF334F).withValues(alpha:0.78):Colors.transparent,
+                          border:Border.all(color:selected?const Color(0xFFFF6B7F):Colors.transparent,width:2),
                           borderRadius:BorderRadius.circular(18),
                         ),
                       ),
@@ -1250,6 +1263,75 @@ class _ShellState extends State<Shell> {
     );
   }
 
+  Widget exerciseVisualCard(String asset, String title, String subtitle) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Image.asset(asset, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: const Color(0xFF0B1018),
+              alignment: Alignment.center,
+              child: const Icon(Icons.fitness_center, size: 54),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(subtitle),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget gluteBridgeSequence() {
+    final steps = [
+      ('assets/exercises/glute_start.png', lang=='ar'?'1 • البداية':'1 • Start'),
+      ('assets/exercises/glute_movement.png', lang=='ar'?'2 • أثناء الحركة':'2 • Movement'),
+      ('assets/exercises/glute_finish.png', lang=='ar'?'3 • النهاية':'3 • Finish'),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(lang=='ar'?'خطوات التمرين 3D':'3D exercise steps',
+          style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+        const SizedBox(height:10),
+        ...steps.map((e)=>Padding(
+          padding:const EdgeInsets.only(bottom:10),
+          child:exerciseVisualCard(e.$1,e.$2,
+            lang=='ar'?'اتبع الوضعية المعروضة وتحرك ببطء وتحكم.':'Match the shown position and move slowly with control.'),
+        )),
+      ],
+    );
+  }
+
+  Widget exerciseLibraryPreview() {
+    final items = [
+      ('assets/exercises/squat_3d.png','Squat','3 × 12'),
+      ('assets/exercises/glute_bridge_3d.png','Glute Bridge','3 × 15'),
+      ('assets/exercises/knee_extension_3d.png','Knee Extension','3 × 12'),
+      ('assets/exercises/calf_raise_3d.png','Calf Raise','3 × 15'),
+    ];
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Text(lang=='ar'?'مكتبة التمارين العلاجية':'Exercise library',
+        style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900)),
+      const SizedBox(height:10),
+      GridView.builder(
+        shrinkWrap:true,
+        physics:const NeverScrollableScrollPhysics(),
+        itemCount:items.length,
+        gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount:2,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:.78),
+        itemBuilder:(context,i){ final e=items[i]; return exerciseVisualCard(e.$1,e.$2,e.$3); },
+      ),
+    ]);
+  }
+
   Widget workoutPage() {
     return pageBody([
       Text(tr('session'),style:const TextStyle(fontSize:28,fontWeight:FontWeight.bold)),
@@ -1298,15 +1380,9 @@ class _ShellState extends State<Shell> {
         ),
       ),
       const SizedBox(height:18),
-      mediaPlaceholder(
-        lang=='ar'?'شرح التمرين بالصورة':'Exercise image guide',
-        Icons.image_outlined,
-      ),
-      const SizedBox(height:10),
-      mediaPlaceholder(
-        lang=='ar'?'فيديو التمرين':'Exercise video',
-        Icons.play_circle_outline,
-      ),
+      exerciseLibraryPreview(),
+      const SizedBox(height:18),
+      gluteBridgeSequence(),
       const SizedBox(height:18),
       FilledButton.icon(
         onPressed:hasSafetyFlag ? null : ()=>setState(()=>trainingDone=!trainingDone),
@@ -1342,15 +1418,13 @@ class _ShellState extends State<Shell> {
         child: infoCard(Icons.play_circle_outline, e.$1, e.$2),
       )),
       const SizedBox(height:8),
-      mediaPlaceholder(
-        lang=='ar'?'صورة تمرين التعافي':'Recovery exercise image',
-        Icons.image_outlined,
+      exerciseVisualCard(
+        'assets/exercises/glute_bridge_3d.png',
+        lang=='ar'?'Glute Bridge • دليل 3D':'Glute Bridge • 3D guide',
+        lang=='ar'?'3 مجموعات × 15 تكرار — ضمن المدى المريح فقط.':'3 sets × 15 reps — stay within a comfortable range.',
       ),
-      const SizedBox(height:10),
-      mediaPlaceholder(
-        lang=='ar'?'فيديو تمرين التعافي':'Recovery exercise video',
-        Icons.play_circle_outline,
-      ),
+      const SizedBox(height:12),
+      gluteBridgeSequence(),
       const SizedBox(height:18),
       FilledButton.icon(
         onPressed:hasSafetyFlag ? null : ()=>setState(()=>recoveryDone=!recoveryDone),
