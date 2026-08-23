@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'motion_coach.dart';
 
 void main() => runApp(const MoventraApp());
 
@@ -163,6 +165,36 @@ class _ShellState extends State<Shell> {
   bool redFlagBowelBladder = false;
   bool trainingDone = false;
   bool recoveryDone = false;
+  final List<String> checkHistory = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      checkHistory
+        ..clear()
+        ..addAll(prefs.getStringList('moventra_check_history') ?? const []);
+    });
+  }
+
+  Future<void> _saveCheckToHistory() async {
+    final now = DateTime.now();
+    final stamp =
+        '${now.year.toString().padLeft(4,'0')}-${now.month.toString().padLeft(2,'0')}-${now.day.toString().padLeft(2,'0')} '
+        '${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}';
+    final zones = painfulZones.isEmpty ? '$bodyArea/$bodySide' : painfulZones.join(', ');
+    final entry = '$stamp|$zones|${pain.round()}|${hasSafetyFlag ? 'SAFETY' : 'OK'}';
+    checkHistory.insert(0, entry);
+    if (checkHistory.length > 60) checkHistory.removeRange(60, checkHistory.length);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('moventra_check_history', checkHistory);
+  }
 
   final Map<String, Map<String, String>> t = {
     'en': {
@@ -938,68 +970,44 @@ class _ShellState extends State<Shell> {
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .18),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.view_in_ar),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    l('3D Body Check','فحص الجسم 3D','Bilan corporel 3D','3D Körper-Check'),
-                    style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
-                  ),
-                ),
-                Switch(
-                  value: useReal3D,
-                  onChanged: (v) => setState(() => useReal3D = v),
-                ),
+                const Icon(Icons.view_in_ar),
+                const SizedBox(width: 10),
+                Expanded(child: Text(
+                  l('3D Body + Pain Map','3D + خريطة الألم','Corps 3D + carte douleur','3D-Körper + Schmerzkarte'),
+                  style: const TextStyle(fontSize:21,fontWeight:FontWeight.w800),
+                )),
               ]),
-              const SizedBox(height: 8),
+              const SizedBox(height:8),
               Text(l(
-                'Rotate 360° and zoom. For exact pain selection, use the anatomical pain map until a segmented GLB mesh is installed.',
-                'دوّر الجسم 360° وكبّر الصورة. لتحديد الألم بدقة استخدم الخريطة التشريحية إلى أن يتم تركيب نموذج GLB مقسّم إلى أجزاء قابلة للنقر.',
-                'Tournez à 360° et zoomez. Pour une sélection précise, utilisez la carte anatomique jusqu’à l’installation d’un maillage GLB segmenté.',
-                '360° drehen und zoomen. Für eine exakte Schmerzauswahl die anatomische Karte nutzen, bis ein segmentiertes GLB installiert ist.',
+                'Rotate and zoom the 3D body, then tap every painful area on the anatomical map below.',
+                'دوّر وكبّر الجسم 3D، ثم اضغط على كل منطقة مؤلمة في الخريطة التشريحية أسفله.',
+                'Tournez et zoomez le corps 3D, puis touchez chaque zone douloureuse sur la carte ci-dessous.',
+                '3D-Körper drehen/zoomen und danach jede schmerzende Stelle auf der Karte darunter antippen.',
               )),
             ],
           ),
         ),
-        const SizedBox(height: 14),
-        if (useReal3D)
-          SizedBox(
-            height: 470,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(26),
-              child: const ModelViewer(
-                src: 'assets/models/human.glb',
-                alt: 'MOVENTRA 3D human body',
-                ar: false,
-                autoRotate: false,
-                cameraControls: true,
-                disableZoom: false,
-                backgroundColor: Color(0xFF0D121C),
-              ),
+        const SizedBox(height:14),
+        SizedBox(
+          height: 440,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: const ModelViewer(
+              src: 'assets/models/human.glb',
+              alt: 'MOVENTRA 3D human body',
+              ar: false,
+              autoRotate: false,
+              cameraControls: true,
+              disableZoom: false,
+              backgroundColor: Color(0xFF0D121C),
             ),
           ),
-        const SizedBox(height: 14),
-        OutlinedButton.icon(
-          onPressed: () => setState(() => useReal3D = !useReal3D),
-          icon: Icon(useReal3D ? Icons.touch_app : Icons.view_in_ar),
-          label: Text(useReal3D
-              ? l('Select pain precisely','حدد الألم بدقة','Sélectionner précisément','Schmerz präzise auswählen')
-              : l('Return to 3D','العودة إلى 3D','Retour au 3D','Zurück zu 3D')),
         ),
-        if (!useReal3D) ...[
-          const SizedBox(height: 12),
-          precisePainMap(),
-        ],
+        const SizedBox(height:18),
+        precisePainMap(),
       ],
     );
   }
@@ -1121,8 +1129,10 @@ class _ShellState extends State<Shell> {
       infoCard(Icons.favorite, tr('ready'), '${(10 - pain * 0.7).round().clamp(1, 10)} / 10'),
       const SizedBox(height: 18),
       FilledButton.icon(
-        onPressed: () {
+        onPressed: () async {
           setState(() => checkSaved = true);
+          await _saveCheckToHistory();
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l('Body Check saved','تم حفظ فحص الجسم','Bilan enregistré','Körper-Check gespeichert'))),
           );
@@ -1258,6 +1268,36 @@ class _ShellState extends State<Shell> {
           '$bodyArea/$bodySide • ${pain.round()}/10 • ${painfulZones.length} zone(s)'),
       ],
       const SizedBox(height:18),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(children:[
+                const Icon(Icons.videocam_outlined,size:30),
+                const SizedBox(width:12),
+                Expanded(child:Text(
+                  lang=='ar'?'MOVENTRA Motion Coach':'MOVENTRA Motion Coach',
+                  style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800),
+                )),
+              ]),
+              const SizedBox(height:8),
+              Text(lang=='ar'
+                ? 'الكاميرا تحلل وضعية الجسم، ترسم الهيكل، وتحسب زاوية الركبة وعدد تكرارات السكوات على الجهاز.'
+                : 'Use the camera for on-device pose tracking, skeleton overlay, knee-angle analysis and squat rep counting.'),
+              const SizedBox(height:12),
+              FilledButton.icon(
+                onPressed:hasSafetyFlag ? null : ()=>Navigator.of(context).push(
+                  MaterialPageRoute(builder:(_)=>const MotionCoachPage())),
+                icon:const Icon(Icons.camera_alt_outlined),
+                label:Text(lang=='ar'?'فتح الكاميرا وتحليل الحركة':'Open camera & analyze movement'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height:18),
       mediaPlaceholder(
         lang=='ar'?'شرح التمرين بالصورة':'Exercise image guide',
         Icons.image_outlined,
@@ -1376,6 +1416,40 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
+      const SizedBox(height:18),
+      Row(children:[
+        Expanded(child:Text(
+          lang=='ar'?'سجل الفحوصات':'Body Check history',
+          style:const TextStyle(fontSize:20,fontWeight:FontWeight.w800),
+        )),
+        if(checkHistory.isNotEmpty)
+          TextButton(
+            onPressed:() async {
+              final prefs=await SharedPreferences.getInstance();
+              await prefs.remove('moventra_check_history');
+              if(mounted) setState(()=>checkHistory.clear());
+            },
+            child:Text(lang=='ar'?'مسح':'Clear'),
+          ),
+      ]),
+      const SizedBox(height:8),
+      if(checkHistory.isEmpty)
+        infoCard(Icons.history,lang=='ar'?'لا يوجد سجل بعد':'No history yet',
+          lang=='ar'?'احفظ Body Check ليظهر هنا بالتاريخ والوقت.':'Save a Body Check to add a dated entry here.')
+      else
+        ...checkHistory.take(8).map((raw){
+          final p=raw.split('|');
+          final safety=p.length>3 && p[3]=='SAFETY';
+          return Padding(
+            padding:const EdgeInsets.only(bottom:10),
+            child:Card(child:ListTile(
+              leading:CircleAvatar(child:Icon(safety?Icons.warning_amber:Icons.history)),
+              title:Text(p.isNotEmpty?p[0]:''),
+              subtitle:Text(p.length>2?'${p[1]} • Pain ${p[2]}/10':''),
+              trailing:Icon(safety?Icons.health_and_safety:Icons.check_circle_outline),
+            )),
+          );
+        }),
       const SizedBox(height:12),
       infoCard(
         Icons.science_outlined,
